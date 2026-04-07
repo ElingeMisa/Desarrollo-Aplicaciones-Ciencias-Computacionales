@@ -30,3 +30,16 @@
 *.exe
 *.out
 *.app
+
+# Environment files
+*.env
+
+# csproj and sln files
+*.sln
+*.csproj
+*.vcxproj
+
+# Visual Studio Code
+.vscode/
+/tarea-1/EstructurasDatos/bin
+/tarea-1/EstructurasDatos/obj
