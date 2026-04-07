@@ -22,6 +22,17 @@ public class MiDictionary<TKey, TValue> where TKey : notnull
         _cubetas = new Entrada[capacidadInicial];
     }
 
+    /// <summary>Constructor a partir de una colección de pares clave-valor (opcional).</summary>
+    /// <param name="pares">Colección de pares clave-valor para inicializar el diccionario.</param>
+    
+    public MiDictionary(IEnumerable<(TKey clave, TValue valor)>? pares = null) : this(8)
+    {
+        if (pares is not null)
+        {
+            foreach (var (clave, valor) in pares)
+                Add(clave, valor);
+        }
+    }
     /// <summary>Numero de pares clave-valor almacenados.</summary>
     public int Count => _count;
 

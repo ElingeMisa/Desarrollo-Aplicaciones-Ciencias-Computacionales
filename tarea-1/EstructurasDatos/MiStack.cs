@@ -69,6 +69,20 @@ public class MiStack<T>
         _datos = nuevo;
     }
 
+    /// <summary>
+    /// Constructor que genera un stack a partir de los elementos de un arreglo.
+    /// </summary>
+    /// <param name="elementos">Arreglo de elementos para inicializar el stack.</param>
+    public MiStack(T[] elementos)
+    {
+        _datos = new T[CapacidadInicial];
+        _tope = -1;
+        foreach (T elemento in elementos)
+        {
+            Push(elemento);
+        }
+    }
+
     public override string ToString() =>
         $"MiStack [ cima -> {(IsEmpty ? "vacío" : string.Join(", ", _datos[..(_tope + 1)].Reverse()))} ]";
 }

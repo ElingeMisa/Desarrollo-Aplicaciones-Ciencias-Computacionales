@@ -78,6 +78,21 @@ public class MiQueue<T>
         return false;
     }
 
+    /// <summary>
+    /// Constructor a partir de una colección de elementos (opcional).
+    /// </summary>
+    /// <returns></returns>
+    /// <param name="elementos"></param>
+    public MiQueue(IEnumerable<T>? elementos = null)
+    {
+        _frente = _final = null;
+        _tamanio = 0;
+        if (elementos is not null)
+        {
+            foreach (T elemento in elementos)
+                Enqueue(elemento);
+        }
+    }
     public override string ToString()
     {
         if (IsEmpty) return "MiQueue [ frente -> vacía ]";

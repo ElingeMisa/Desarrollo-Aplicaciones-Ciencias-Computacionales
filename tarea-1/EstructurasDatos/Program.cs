@@ -1,65 +1,62 @@
 using EstructurasDatos;
 
-// ─────────────────────────────────────────────
-//  DEMO: MiStack<T>  (LIFO)
-// ─────────────────────────────────────────────
-Console.WriteLine("══════════════════════════════");
-Console.WriteLine("  STACK  (LIFO)");
-Console.WriteLine("══════════════════════════════");
+class Test
+{
+    static void Main()
+    {
+        RunAllTests();
+    }
 
-var stack = new MiStack<int>();
-stack.Push(10);
-stack.Push(20);
-stack.Push(30);
-Console.WriteLine(stack);                                       // cima → 30, 20, 10
-Console.WriteLine($"Peek : {stack.Peek()}");                   // 30
-Console.WriteLine($"Pop  : {stack.Pop()}");                    // 30
-Console.WriteLine($"Size : {stack.Size}");                     // 2
-Console.WriteLine($"Contains 10: {stack.Contains(10)}");       // True
-Console.WriteLine(stack);                                       // cima → 20, 10
+    static void RunAllTests()
+    {
+        StackDemo();
+        QueueDemo();
+        DictionaryDemo();
+    }
 
-// ─────────────────────────────────────────────
-//  DEMO: MiQueue<T>  (FIFO)
-// ─────────────────────────────────────────────
-Console.WriteLine();
-Console.WriteLine("══════════════════════════════");
-Console.WriteLine("  QUEUE  (FIFO)");
-Console.WriteLine("══════════════════════════════");
+    static void StackDemo()
+    {
+        MiStack<int> stack = new MiStack<int>(new int[] { 10, 20, 30 });
 
-var queue = new MiQueue<string>();
-queue.Enqueue("alfa");
-queue.Enqueue("beta");
-queue.Enqueue("gamma");
-Console.WriteLine(queue);                                       // frente → alfa → beta → gamma ← final
-Console.WriteLine($"Peek    : {queue.Peek()}");                // alfa
-Console.WriteLine($"Dequeue : {queue.Dequeue()}");             // alfa
-Console.WriteLine($"Size    : {queue.Size}");                  // 2
-Console.WriteLine($"Contains 'gamma': {queue.Contains("gamma")}"); // True
-Console.WriteLine(queue);                                       // frente → beta → gamma ← final
+        Utilities.LogHeader("STACK  (LIFO)");
+        Utilities.WriteLine(stack.ToString());
+        Utilities.WriteLine($"Peek : {stack.Peek()}");
+        Utilities.WriteLine($"Pop  : {stack.Pop()}");
+        Utilities.WriteLine($"Size : {stack.Size}");
+        Utilities.WriteLine($"Contains 10: {stack.Contains(10)}");
+        Utilities.WriteLine(stack.ToString());
+    }
 
-// ─────────────────────────────────────────────
-//  DEMO: MiDictionary<TKey,TValue>  (Hash Table)
-// ─────────────────────────────────────────────
-Console.WriteLine();
-Console.WriteLine("══════════════════════════════");
-Console.WriteLine("  DICTIONARY  (Hash Table)");
-Console.WriteLine("══════════════════════════════");
+    static void QueueDemo()
+    {
+        MiQueue<string> queue = new MiQueue<string>(new string[] { "alfa", "beta", "gamma" });
+        
+        Utilities.LogHeader("QUEUE  (FIFO)");
+        Utilities.WriteLine(queue.ToString());
+        Utilities.WriteLine($"Peek    : {queue.Peek()}");
+        Utilities.WriteLine($"Dequeue : {queue.Dequeue()}");
+        Utilities.WriteLine($"Size    : {queue.Size}");
+        Utilities.WriteLine($"Contains 'gamma': {queue.Contains("gamma")}");
+        Utilities.WriteLine(queue.ToString());
+    }
 
-var dict = new MiDictionary<string, int>();
-dict.Add("manzana", 3);
-dict.Add("pera", 7);
-dict.Add("uva", 12);
-Console.WriteLine(dict);
+    static void DictionaryDemo()
+    {
+        Utilities.LogHeader("DICTIONARY  (Hash Table)");
+        MiDictionary<string, int> dict = new MiDictionary<string, int>(new (string, int)[] { ("manzana", 3), ("pera", 7), ("uva", 12) });
+        Utilities.WriteLine(dict.ToString());
 
-dict["pera"] = 99;                                              // actualizar con indexador
-Console.WriteLine($"pera actualizada : {dict["pera"]}");       // 99
-Console.WriteLine($"ContainsKey 'uva': {dict.ContainsKey("uva")}"); // True
+        dict["pera"] = 99;
+        Utilities.WriteLine($"pera actualizada : {dict["pera"]}");
+        Utilities.WriteLine($"ContainsKey 'uva': {dict.ContainsKey("uva")}");
 
-dict.Remove("manzana");
-Console.WriteLine($"Count tras Remove: {dict.Count}");         // 2
+        dict.Remove("manzana");
+        Utilities.WriteLine($"Count tras Remove: {dict.Count}");
 
-if (dict.TryGetValue("uva", out int val))
-    Console.WriteLine($"TryGet 'uva' → {val}");                // 12
+        if (dict.TryGetValue("uva", out int val))
+            Utilities.WriteLine($"TryGet 'uva' -> {val}");
 
-Console.WriteLine("Claves : " + string.Join(", ", dict.Keys));
-Console.WriteLine("Valores: " + string.Join(", ", dict.Values));
+        Utilities.WriteLine("Claves : " + string.Join(", ", dict.Keys));
+        Utilities.WriteLine("Valores: " + string.Join(", ", dict.Values));
+    }
+}
