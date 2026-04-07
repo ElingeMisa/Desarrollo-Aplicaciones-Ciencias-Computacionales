@@ -1,88 +1,83 @@
 namespace EstructurasDatos;
 
 /// <summary>
-/// Stack (LIFO) implementado con array.
-/// Operaciones principales: Push, Pop, Peek, IsEmpty, Size, Clear.
+/// Stack genérico (LIFO) implementado con lista enlazada usando Nodo&lt;T&gt;.
 /// </summary>
 public class MiStack<T>
 {
-    private T[] _datos;
-    private int _tope;
-    private const int CapacidadInicial = 4;
+    private Nodo<T>? _cima;
+    private int _tamanio;
 
     public MiStack()
     {
-        _datos = new T[CapacidadInicial];
-        _tope = -1;
+        _cima = null;
+        _tamanio = 0;
     }
 
-    /// <summary>Número de elementos en el stack.</summary>
-    public int Size => _tope + 1;
+    public MiStack(T[] elementos) : this()
+    {
+        for (int i = 0; i < elementos.Length; i++)
+            Push(elementos[i]);
+    }
 
-    /// <summary>True si el stack no tiene elementos.</summary>
-    public bool IsEmpty => _tope == -1;
+    public int Size => _tamanio;
 
-    /// <summary>Agrega un elemento en la cima.</summary>
+    public bool IsEmpty => _tamanio == 0;
+
     public void Push(T elemento)
     {
-        if (_tope == _datos.Length - 1)
-            Redimensionar();
-
-        _datos[++_tope] = elemento;
+        _cima = new Nodo<T>(elemento, _cima);
+        _tamanio++;
     }
 
-    /// <summary>Elimina y regresa el elemento de la cima.</summary>
     public T Pop()
     {
         if (IsEmpty)
             throw new InvalidOperationException("Stack vacío.");
 
-        T valor = _datos[_tope];
-        _datos[_tope--] = default!;
+        T valor = _cima!.Valor;
+        _cima = _cima.Siguiente;
+        _tamanio--;
         return valor;
     }
 
-    /// <summary>Regresa el elemento de la cima sin eliminarlo.</summary>
     public T Peek()
     {
         if (IsEmpty)
             throw new InvalidOperationException("Stack vacío.");
 
-        return _datos[_tope];
+        return _cima!.Valor;
     }
 
-    /// <summary>Elimina todos los elementos.</summary>
     public void Clear()
     {
-        Array.Clear(_datos, 0, _tope + 1);
-        _tope = -1;
+        _cima = null;
+        _tamanio = 0;
     }
 
-    /// <summary>True si el elemento existe en el stack.</summary>
-    public bool Contains(T elemento) =>
-        Array.IndexOf(_datos, elemento, 0, _tope + 1) >= 0;
-
-    private void Redimensionar()
+    public bool Contains(T elemento)
     {
-        T[] nuevo = new T[_datos.Length * 2];
-        Array.Copy(_datos, nuevo, _datos.Length);
-        _datos = nuevo;
-    }
-
-    /// <summary>
-    /// Constructor que genera un stack a partir de los elementos de un arreglo.
-    /// </summary>
-    /// <param name="elementos">Arreglo de elementos para inicializar el stack.</param>
-    public MiStack(T[] elementos)
-    {
-        _datos = new T[CapacidadInicial];
-        _tope = -1;
-        foreach (T elemento in elementos)
+        Nodo<T>? actual = _cima;
+        while (actual is not null)
         {
-            Push(elemento);
+            if (EqualityComparer<T>.Default.Equals(actual.Valor, elemento))
+                return true;
+            actual = actual.Siguiente;
         }
+        return false;
     }
 
-    public override string ToString() =>
-        $"MiStack [ cima -> {(IsEmpty ? "vacío" : string.Join(", ", _datos[..(_tope + 1)].Reverse()))} ]";
+    public override string ToString()
+    {
+        if (IsEmpty) return "MiStack [ cima -> vacío ]";
+
+        var partes = new List<string>();
+        Nodo<T>? actual = _cima;
+        while (actual is not null)
+        {
+            partes.Add(actual.Valor?.ToString() ?? "null");
+            actual = actual.Siguiente;
+        }
+        return $"MiStack [ cima -> {string.Join(", ", partes)} ]";
+    }
 }
