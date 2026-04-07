@@ -43,3 +43,6 @@
 .vscode/
 /tarea-1/EstructurasDatos/bin
 /tarea-1/EstructurasDatos/obj
+
+# Zip files
+*.zip

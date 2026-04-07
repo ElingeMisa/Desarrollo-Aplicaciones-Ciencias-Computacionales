@@ -1,31 +1,28 @@
 namespace EstructurasDatos;
 
 /// <summary>
-/// Hash table generica (clave -> valor) implementada con encadenamiento (chaining).
-/// Operaciones principales: Add, Get, Remove, ContainsKey, Update, Keys, Values, Clear.
+/// Hash table genérica (clave -> valor) con encadenamiento usando NodoDict&lt;TKey, TValue&gt;.
 /// </summary>
 public class MiDictionary<TKey, TValue> where TKey : notnull
 {
-    private class Entrada(TKey clave, TValue valor)
-    {
-        public TKey Clave = clave;
-        public TValue Valor = valor;
-        public Entrada? Siguiente = null;
-    }
-
-    private Entrada?[] _cubetas;
+    private NodoDict<TKey, TValue>?[] _cubetas;
     private int _count;
     private const double FactorCarga = 0.75;
+    private const int CapacidadInicial = 8;
 
-    public MiDictionary(int capacidadInicial = 8)
+    public MiDictionary()
     {
-        _cubetas = new Entrada[capacidadInicial];
+        _cubetas = new NodoDict<TKey, TValue>[CapacidadInicial];
+        _count = 0;
     }
 
-    /// <summary>Constructor a partir de una colección de pares clave-valor (opcional).</summary>
-    /// <param name="pares">Colección de pares clave-valor para inicializar el diccionario.</param>
-    
-    public MiDictionary(IEnumerable<(TKey clave, TValue valor)>? pares = null) : this(8)
+    public MiDictionary(int capacidadInicial)
+    {
+        _cubetas = new NodoDict<TKey, TValue>[capacidadInicial];
+        _count = 0;
+    }
+
+    public MiDictionary(IEnumerable<(TKey clave, TValue valor)>? pares = null) : this()
     {
         if (pares is not null)
         {
@@ -33,50 +30,47 @@ public class MiDictionary<TKey, TValue> where TKey : notnull
                 Add(clave, valor);
         }
     }
-    /// <summary>Numero de pares clave-valor almacenados.</summary>
+
     public int Count => _count;
 
-    /// <summary>True si no hay entradas.</summary>
     public bool IsEmpty => _count == 0;
 
-    // indice de cubeta para una clave dada
     private int Indice(TKey clave) =>
         Math.Abs(clave.GetHashCode()) % _cubetas.Length;
 
-    /// <summary>Agrega un nuevo par clave-valor. Lanza excepcion si la clave ya existe.</summary>
     public void Add(TKey clave, TValue valor)
     {
         if (ContainsKey(clave))
             throw new ArgumentException($"La clave '{clave}' ya existe.");
 
-        InsertarInterno(clave, valor);
+        Insertar(clave, valor);
         _count++;
 
         if ((double)_count / _cubetas.Length >= FactorCarga)
             Rehash();
     }
 
-    /// <summary>Regresa el valor asociado a la clave.</summary>
     public TValue Get(TKey clave)
     {
-        var entrada = BuscarEntrada(clave);
-        if (entrada is null)
+        NodoDict<TKey, TValue>? nodo = Buscar(clave);
+        if (nodo is null)
             throw new KeyNotFoundException($"Clave '{clave}' no encontrada.");
-        return entrada.Valor;
+        return nodo.Valor;
     }
 
-    /// <summary>Indexador: permite usar dict[clave] para leer y escribir.</summary>
     public TValue this[TKey clave]
     {
         get => Get(clave);
         set
         {
-            var entrada = BuscarEntrada(clave);
-            if (entrada is not null)
-                entrada.Valor = value;
+            NodoDict<TKey, TValue>? nodo = Buscar(clave);
+            if (nodo is not null)
+            {
+                nodo.Valor = value;
+            }
             else
             {
-                InsertarInterno(clave, value);
+                Insertar(clave, value);
                 _count++;
                 if ((double)_count / _cubetas.Length >= FactorCarga)
                     Rehash();
@@ -84,12 +78,11 @@ public class MiDictionary<TKey, TValue> where TKey : notnull
         }
     }
 
-    /// <summary>Elimina el par con la clave dada. Regresa true si existia.</summary>
     public bool Remove(TKey clave)
     {
         int idx = Indice(clave);
-        Entrada? anterior = null;
-        Entrada? actual = _cubetas[idx];
+        NodoDict<TKey, TValue>? anterior = null;
+        NodoDict<TKey, TValue>? actual = _cubetas[idx];
 
         while (actual is not null)
         {
@@ -99,6 +92,7 @@ public class MiDictionary<TKey, TValue> where TKey : notnull
                     _cubetas[idx] = actual.Siguiente;
                 else
                     anterior.Siguiente = actual.Siguiente;
+
                 _count--;
                 return true;
             }
@@ -108,37 +102,33 @@ public class MiDictionary<TKey, TValue> where TKey : notnull
         return false;
     }
 
-    /// <summary>True si la clave existe en el diccionario.</summary>
-    public bool ContainsKey(TKey clave) => BuscarEntrada(clave) is not null;
+    public bool ContainsKey(TKey clave) => Buscar(clave) is not null;
 
-    /// <summary>Intenta obtener el valor sin lanzar excepcion.</summary>
     public bool TryGetValue(TKey clave, out TValue valor)
     {
-        var entrada = BuscarEntrada(clave);
-        if (entrada is not null)
+        NodoDict<TKey, TValue>? nodo = Buscar(clave);
+        if (nodo is not null)
         {
-            valor = entrada.Valor;
+            valor = nodo.Valor;
             return true;
         }
         valor = default!;
         return false;
     }
 
-    /// <summary>Elimina todos los pares.</summary>
     public void Clear()
     {
-        _cubetas = new Entrada[_cubetas.Length];
+        _cubetas = new NodoDict<TKey, TValue>[_cubetas.Length];
         _count = 0;
     }
 
-    /// <summary>Coleccion de todas las claves.</summary>
     public IEnumerable<TKey> Keys
     {
         get
         {
-            foreach (var cubeta in _cubetas)
+            for (int i = 0; i < _cubetas.Length; i++)
             {
-                var actual = cubeta;
+                NodoDict<TKey, TValue>? actual = _cubetas[i];
                 while (actual is not null)
                 {
                     yield return actual.Clave;
@@ -148,14 +138,13 @@ public class MiDictionary<TKey, TValue> where TKey : notnull
         }
     }
 
-    /// <summary>Coleccion de todos los valores.</summary>
     public IEnumerable<TValue> Values
     {
         get
         {
-            foreach (var cubeta in _cubetas)
+            for (int i = 0; i < _cubetas.Length; i++)
             {
-                var actual = cubeta;
+                NodoDict<TKey, TValue>? actual = _cubetas[i];
                 while (actual is not null)
                 {
                     yield return actual.Valor;
@@ -165,22 +154,21 @@ public class MiDictionary<TKey, TValue> where TKey : notnull
         }
     }
 
-    // Helpers privados
-
-    private void InsertarInterno(TKey clave, TValue valor)
+    private void Insertar(TKey clave, TValue valor)
     {
         int idx = Indice(clave);
-        var nueva = new Entrada(clave, valor) { Siguiente = _cubetas[idx] };
-        _cubetas[idx] = nueva;
+        NodoDict<TKey, TValue> nuevo = new NodoDict<TKey, TValue>(clave, valor, _cubetas[idx]);
+        _cubetas[idx] = nuevo;
     }
 
-    private Entrada? BuscarEntrada(TKey clave)
+    private NodoDict<TKey, TValue>? Buscar(TKey clave)
     {
         int idx = Indice(clave);
-        var actual = _cubetas[idx];
+        NodoDict<TKey, TValue>? actual = _cubetas[idx];
         while (actual is not null)
         {
-            if (actual.Clave.Equals(clave)) return actual;
+            if (actual.Clave.Equals(clave))
+                return actual;
             actual = actual.Siguiente;
         }
         return null;
@@ -188,15 +176,16 @@ public class MiDictionary<TKey, TValue> where TKey : notnull
 
     private void Rehash()
     {
-        var antiguas = _cubetas;
-        _cubetas = new Entrada[antiguas.Length * 2];
+        NodoDict<TKey, TValue>?[] antiguas = _cubetas;
+        _cubetas = new NodoDict<TKey, TValue>[antiguas.Length * 2];
         _count = 0;
-        foreach (var cubeta in antiguas)
+
+        for (int i = 0; i < antiguas.Length; i++)
         {
-            var actual = cubeta;
+            NodoDict<TKey, TValue>? actual = antiguas[i];
             while (actual is not null)
             {
-                InsertarInterno(actual.Clave, actual.Valor);
+                Insertar(actual.Clave, actual.Valor);
                 _count++;
                 actual = actual.Siguiente;
             }
@@ -205,7 +194,9 @@ public class MiDictionary<TKey, TValue> where TKey : notnull
 
     public override string ToString()
     {
-        var pares = Keys.Select(k => $"{k}: {Get(k)}");
+        var pares = new List<string>();
+        foreach (TKey k in Keys)
+            pares.Add($"{k}: {Get(k)}");
         return $"MiDictionary {{ {string.Join(", ", pares)} }}";
     }
 }
