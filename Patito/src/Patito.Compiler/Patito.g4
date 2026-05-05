@@ -222,7 +222,8 @@ CTE_FLOT     : DIGITO+ '.' DIGITO+ ;
 CTE_ENT      : DIGITO+ ;
 
 // --- Identificadores --------------------------------------------------------
-// Coincide con: letra alfanum*  donde letra = [a-z], alfanum = letra | digito.
+// Coincide con: letra alfanum*  donde letra = [a-zA-Z], alfanum = letra | digito.
+// Se permiten mayusculas para soportar identificadores camelCase (p.ej. sumarHasta).
 ID           : LETRA ALFANUM* ;
 
 // --- Cadenas literales ('letrero') -----------------------------------------
@@ -231,7 +232,7 @@ ID           : LETRA ALFANUM* ;
 LETRERO      : '"' ~["\r\n]* '"' ;
 
 // --- Fragments (definiciones auxiliares, NO producen tokens) ---------------
-fragment LETRA   : [a-z] ;
+fragment LETRA   : [a-zA-Z] ;
 fragment DIGITO  : [0-9] ;
 fragment ALFANUM : LETRA | DIGITO ;
 

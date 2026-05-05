@@ -52,12 +52,14 @@ public class ScannerTests
         Assert.Equal(new[] { PatitoLexer.ID }, TokenTypes(text));
     }
 
-    [Fact]
-    public void Identificador_SoloMinusculasYDigitos_TalCualLaSpec()
+    [Theory]
+    [InlineData("Hola")]           // empieza con mayuscula
+    [InlineData("sumarHasta")]     // camelCase
+    [InlineData("MiVariable1")]    // mayusculas + digito
+    public void Identificador_AceptaMayusculasYMinusculas(string text)
     {
-        // 'X' (mayuscula) NO esta en [a-z] -> debe haber error lexico.
-        var result = PatitoFrontEnd.Compile("Hola", "<test>");
-        Assert.NotEmpty(result.LexErrors);
+        // [a-zA-Z] permite identificadores con mayusculas (camelCase / PascalCase).
+        Assert.Equal(new[] { PatitoLexer.ID }, TokenTypes(text));
     }
 
     // ---- 2. Constantes ---------------------------------------------------------
