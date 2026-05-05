@@ -1,0 +1,10 @@
+// ERROR ESPERADO: parentesis sin cerrar en la condicion.
+programa malo;
+vars
+    x: entero;
+inicio {
+    x = 1;
+    si (x > 0 {
+        escribe("falta cerrar el parentesis");
+    };
+} fin

@@ -1,0 +1,5 @@
+// ERROR ESPERADO: falta el ; despues del id en el encabezado del programa.
+programa malo
+inicio {
+    escribe("nunca llega aqui");
+} fin

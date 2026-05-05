@@ -1,0 +1,19 @@
+// Funcion nula con parametros y vars locales, llamada desde el cuerpo principal.
+programa concarga;
+vars
+    a: entero;
+
+nula saludar (n: entero) {
+    vars
+        i: entero;
+    i = 0;
+    mientras (i < n) haz {
+        escribe("hola numero", i);
+        i = i + 1;
+    };
+};
+
+inicio {
+    a = 3;
+    saludar(a);
+} fin

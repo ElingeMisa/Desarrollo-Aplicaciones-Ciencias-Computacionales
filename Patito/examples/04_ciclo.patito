@@ -1,0 +1,11 @@
+// Ciclo mientras/haz con contador.
+programa cuenta;
+vars
+    i: entero;
+inicio {
+    i = 0;
+    mientras (i < 5) haz {
+        escribe("i =", i);
+        i = i + 1;
+    };
+} fin

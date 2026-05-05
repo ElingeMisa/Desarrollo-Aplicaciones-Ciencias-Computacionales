@@ -1,0 +1,12 @@
+// si / sino con expresion relacional.
+programa decide;
+vars
+    edad: entero;
+inicio {
+    edad = 18;
+    si (edad < 18) {
+        escribe("menor de edad");
+    } sino {
+        escribe("mayor o igual a 18");
+    };
+} fin

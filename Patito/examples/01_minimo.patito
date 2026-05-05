@@ -1,0 +1,5 @@
+// Programa minimo: sin variables, sin funciones, una sola instruccion.
+programa hola;
+inicio {
+    escribe("hola mundo");
+} fin

@@ -1,0 +1,8 @@
+// ERROR ESPERADO: 'cadena' no es un tipo aceptado por la gramatica
+// (solo entero y flotante en esta fase).
+programa malo;
+vars
+    nombre: cadena;
+inicio {
+    nombre = "Misael";
+} fin

@@ -37,6 +37,10 @@
 # csproj and sln files
 *.sln
 *.csproj
+/Patito/*.csproj
+/Patito/*.sln
+/Patito/bin
+/Patito/obj
 *.vcxproj
 
 # Visual Studio Code

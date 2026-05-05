@@ -1,0 +1,12 @@
+// Declara enteros y flotantes, asigna y opera.
+programa aritmetica;
+vars
+    x, y, z: entero;
+    pi: flotante;
+inicio {
+    x = 10;
+    y = 20;
+    z = x + y * 2;
+    pi = 3.14159;
+    escribe("z =", z, "  pi =", pi);
+} fin

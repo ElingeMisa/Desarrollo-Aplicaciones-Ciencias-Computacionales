@@ -1,0 +1,7 @@
+// ERROR ESPERADO (lexico): el simbolo @ no pertenece al alfabeto de Patito.
+programa malo;
+vars
+    x: entero;
+inicio {
+    x = 5 @ 3;
+} fin

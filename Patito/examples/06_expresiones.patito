@@ -1,0 +1,17 @@
+// Expresiones con parentesis, signos unarios, mezcla de tipos y comparacion.
+programa expresiones;
+vars
+    a, b, c: entero;
+    r: flotante;
+inicio {
+    a = -5;
+    b = +3;
+    c = (a + b) * 2 - 7 / 1;
+    r = 2.5 + 1.5;
+    si (c == -11) {
+        escribe("c es -11 como esperabamos");
+    };
+    si ((a + b) != 0) {
+        escribe("la suma no es cero");
+    };
+} fin

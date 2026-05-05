@@ -1,0 +1,6 @@
+// ERROR ESPERADO (lexico): un letrero no puede tener saltos de linea.
+programa malo;
+inicio {
+    escribe("esto se rompe
+            porque hay un salto");
+} fin

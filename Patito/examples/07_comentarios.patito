@@ -1,0 +1,16 @@
+/* ---------------------------------------------------------------
+   Ejemplo de comentarios. Patito acepta:
+     - Comentarios de linea con dos diagonales
+     - Comentarios de bloque tipo C (no anidados)
+   --------------------------------------------------------------- */
+programa coments;
+vars
+    n: entero;     // contador
+inicio {
+    n = 0;            // inicializacion
+    // bucle simple
+    mientras (n < 3) haz {
+        escribe("n vale", n);
+        n = n + 1;
+    };
+} fin
