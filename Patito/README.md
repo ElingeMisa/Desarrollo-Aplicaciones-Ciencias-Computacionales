@@ -4,6 +4,10 @@ Compilador del lenguaje **Patito** (Victor Misael Escalante Alvarado, A01741176)
 Esta entrega cubre el **front-end**: análisis léxico (scanner) y análisis
 sintáctico (parser), generados con **ANTLR 4** sobre **C# / .NET 8**.
 
+## Descripcion del lenguaje
+
+![Reglas](img/Reglas.png)
+
 ## Estructura
 
 ```
@@ -52,6 +56,9 @@ dotnet run --project src/Patito.Compiler -- --demo
 
 # Correr la suite de pruebas
 dotnet test
+
+# Corre los test pero en una tabla comparativa
+source test-samples.sh
 ```
 
 ## Salida del CLI
