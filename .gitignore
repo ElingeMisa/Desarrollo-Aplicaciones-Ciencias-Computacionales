@@ -42,6 +42,7 @@
 /**/**/**/*.sln
 /**/**/**/bin
 /**/**/**/obj
+/**/**/**/.antlr
 
 # Visual Studio Code
 .vscode/
