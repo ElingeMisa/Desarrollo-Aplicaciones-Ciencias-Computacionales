@@ -51,3 +51,6 @@
 
 # Zip files
 *.zip
+
+#Virtual Environments
+regresion-lineal/.venv
