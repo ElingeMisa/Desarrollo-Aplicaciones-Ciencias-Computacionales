@@ -2,28 +2,40 @@ using System.Collections.Generic;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Tree;
 using Patito.Compiler.Generated;
+using Patito.Compiler.Semantic;
 
 namespace Patito.Compiler;
 
 /// <summary>
-/// Resultado de compilar (analizar lexica y sintacticamente) una fuente Patito.
+/// Resultado de compilar (analizar lexica, sintactica y semanticamente) una fuente Patito.
 /// </summary>
 /// <param name="Tokens">Lista completa de tokens producidos por el scanner.</param>
 /// <param name="Tree">Raiz del arbol de derivacion (regla 'programa') o null si fallo el parser.</param>
 /// <param name="LexErrors">Errores reportados por el scanner (Lexer).</param>
 /// <param name="ParseErrors">Errores reportados por el parser.</param>
+/// <param name="SemanticErrors">Errores reportados por el analizador semantico (Entrega 2).</param>
+/// <param name="Semantic">Instancia del analizador, con el directorio de funciones y la tabla global ya pobladas. Null si el parser fallo.</param>
 public sealed record CompileResult(
     IReadOnlyList<IToken> Tokens,
     IParseTree? Tree,
     IReadOnlyList<CompileError> LexErrors,
-    IReadOnlyList<CompileError> ParseErrors)
+    IReadOnlyList<CompileError> ParseErrors,
+    IReadOnlyList<SemanticError> SemanticErrors,
+    SemanticAnalyzer? Semantic)
 {
-    public bool Success => LexErrors.Count == 0 && ParseErrors.Count == 0;
+    /// <summary>Compilacion totalmente sin errores (lex + parse + semantica).</summary>
+    public bool Success =>
+        LexErrors.Count == 0 && ParseErrors.Count == 0 && SemanticErrors.Count == 0;
+
+    /// <summary>True si scanner y parser pasaron, aunque haya errores semanticos.</summary>
+    public bool ParseSuccess =>
+        LexErrors.Count == 0 && ParseErrors.Count == 0;
 }
 
 /// <summary>
-/// Punto unico de entrada para correr el front-end (scanner + parser) sobre una
-/// fuente Patito. Esta clase la consume tanto el ejecutable como los tests.
+/// Punto unico de entrada para correr el front-end (scanner + parser + analisis
+/// semantico) sobre una fuente Patito. Esta clase la consume tanto el ejecutable
+/// como los tests.
 /// </summary>
 public static class PatitoFrontEnd
 {
@@ -63,10 +75,25 @@ public static class PatitoFrontEnd
                 ex.Message, ex);
         }
 
+        // ---- 3. ANALISIS SEMANTICO ------------------------------------------
+        // Solo corremos el analizador semantico si el parser produjo un arbol;
+        // si hubo errores sintacticos no tendria sentido (y podria fallar al
+        // tocar contextos incompletos).
+        SemanticAnalyzer? analyzer = null;
+        IReadOnlyList<SemanticError> semErrors = System.Array.Empty<SemanticError>();
+        if (tree is not null && parseErrorListener.Errors.Count == 0)
+        {
+            analyzer = new SemanticAnalyzer();
+            ParseTreeWalker.Default.Walk(analyzer, tree);
+            semErrors = analyzer.Errors;
+        }
+
         return new CompileResult(
             tokens,
             tree,
             lexErrorListener.Errors,
-            parseErrorListener.Errors);
+            parseErrorListener.Errors,
+            semErrors,
+            analyzer);
     }
 }

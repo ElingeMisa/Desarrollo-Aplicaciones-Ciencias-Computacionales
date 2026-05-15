@@ -59,6 +59,11 @@ public static class Program
         {
             Console.Error.WriteLine($"[PARSE] {err}");
         }
+        // Reporte de errores semanticos (Entrega 2)
+        foreach (var err in result.SemanticErrors)
+        {
+            Console.Error.WriteLine($"[SEM] {err}");
+        }
 
         if (printTree && result.Tree is not null)
         {
@@ -69,18 +74,68 @@ public static class Program
             Console.WriteLine(Trees.ToStringTree(result.Tree, ruleNames));
         }
 
+        // Si el analizador semantico corrio, imprimimos un resumen del
+        // directorio de funciones y la tabla global. Esto sirve como
+        // "deliverable visual" para la Entrega 2.
+        if (result.Semantic is not null && (printTree || args.Contains("--symbols")))
+        {
+            PrintSymbolTables(result.Semantic);
+        }
+
         if (result.Success)
         {
-            Console.WriteLine($"[OK] {path}: {result.Tokens.Count} tokens, parser sin errores.");
+            var nFuncs = result.Semantic?.Directory.Count ?? 0;
+            var nGlobals = result.Semantic?.GlobalTable.Count ?? 0;
+            Console.WriteLine(
+                $"[OK] {path}: {result.Tokens.Count} tokens, " +
+                $"{nGlobals} variable(s) global(es), {nFuncs} funcion(es) declarada(s).");
             return 0;
         }
         else
         {
             Console.Error.WriteLine(
                 $"[FAIL] {path}: {result.LexErrors.Count} error(es) lexico(s), " +
-                $"{result.ParseErrors.Count} error(es) sintactico(s).");
+                $"{result.ParseErrors.Count} error(es) sintactico(s), " +
+                $"{result.SemanticErrors.Count} error(es) semantico(s).");
             return 1;
         }
+    }
+
+    private static void PrintSymbolTables(Patito.Compiler.Semantic.SemanticAnalyzer sem)
+    {
+        Console.WriteLine();
+        Console.WriteLine($"=== Programa: {sem.ProgramName ?? "<sin nombre>"} ===");
+        Console.WriteLine();
+        Console.WriteLine("--- Tabla de Variables Globales ---");
+        if (sem.GlobalTable.Count == 0)
+        {
+            Console.WriteLine("  (vacia)");
+        }
+        else
+        {
+            foreach (var s in sem.GlobalTable.Symbols)
+            {
+                Console.WriteLine($"  {s}");
+            }
+        }
+        Console.WriteLine();
+        Console.WriteLine("--- Directorio de Funciones ---");
+        if (sem.Directory.Count == 0)
+        {
+            Console.WriteLine("  (sin funciones)");
+        }
+        else
+        {
+            foreach (var f in sem.Directory.Functions)
+            {
+                Console.WriteLine($"  {f}");
+                foreach (var s in f.LocalTable.Symbols)
+                {
+                    Console.WriteLine($"    - {s}");
+                }
+            }
+        }
+        Console.WriteLine();
     }
 
     private static void PrintTokens(CompileResult result)
@@ -102,12 +157,13 @@ public static class Program
 
     private static void PrintUsage()
     {
-        Console.WriteLine("Patito Compiler - Front End (Scanner + Parser)");
+        Console.WriteLine("Patito Compiler - Front End (Scanner + Parser + Analisis Semantico)");
         Console.WriteLine();
         Console.WriteLine("Uso:");
-        Console.WriteLine("  patitoc <archivo.patito>            Analisis lexico + sintactico.");
+        Console.WriteLine("  patitoc <archivo.patito>            Analisis lexico + sintactico + semantico.");
         Console.WriteLine("  patitoc <archivo.patito> --tokens   Imprime ademas la lista de tokens.");
-        Console.WriteLine("  patitoc <archivo.patito> --tree     Imprime ademas el parse tree.");
+        Console.WriteLine("  patitoc <archivo.patito> --tree     Imprime ademas el parse tree y las tablas.");
+        Console.WriteLine("  patitoc <archivo.patito> --symbols  Imprime la tabla global y el directorio de funciones.");
         Console.WriteLine("  patitoc --demo                       Corre un programa embebido.");
         Console.WriteLine();
     }
