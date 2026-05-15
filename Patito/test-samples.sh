@@ -5,7 +5,7 @@ RED='\033[31m';
 NC='\033[0m' # No Color
 
 if [[ ! -x "$EXE" ]]; then
-  echo "Error: no se encontró el ejecutable '$EXE'. Compilando."
+  echo "Error: no se encontró el ejecutable '$EXE'. Compilando ..."
     dotnet build src/Patito.Compiler/Patito.Compiler.csproj -c Debug
     if [[ ! -x "$EXE" ]]; then
         echo "Error: no se pudo compilar el proyecto. Asegúrate de que el proyecto se compile correctamente."
