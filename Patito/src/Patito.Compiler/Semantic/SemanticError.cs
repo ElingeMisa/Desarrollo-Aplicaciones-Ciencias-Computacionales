@@ -28,6 +28,8 @@ public enum SemanticErrorCode
     UndeclaredVariable,
     UndeclaredFunction,
     NameClashesWithProgram,
+    // Entrega 3: incompatibilidad de tipos detectada al generar cuadruplos.
+    TypeMismatch,
 }
 
 public sealed record SemanticError(

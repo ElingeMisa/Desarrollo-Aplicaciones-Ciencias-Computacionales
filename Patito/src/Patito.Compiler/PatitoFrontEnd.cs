@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Tree;
+using Patito.Compiler.CodeGen;
 using Patito.Compiler.Generated;
 using Patito.Compiler.Semantic;
 
@@ -13,8 +14,8 @@ namespace Patito.Compiler;
 /// <param name="Tree">Raiz del arbol de derivacion (regla 'programa') o null si fallo el parser.</param>
 /// <param name="LexErrors">Errores reportados por el scanner (Lexer).</param>
 /// <param name="ParseErrors">Errores reportados por el parser.</param>
-/// <param name="SemanticErrors">Errores reportados por el analizador semantico (Entrega 2).</param>
-/// <param name="Semantic">Instancia del analizador, con el directorio de funciones y la tabla global ya pobladas. Null si el parser fallo.</param>
+/// <param name="SemanticErrors">Errores reportados por el analizador semantico.</param>
+/// <param name="Semantic">Instancia del analizador, con tablas y cuadruplos ya generados. Null si el parser fallo.</param>
 public sealed record CompileResult(
     IReadOnlyList<IToken> Tokens,
     IParseTree? Tree,
@@ -30,12 +31,17 @@ public sealed record CompileResult(
     /// <summary>True si scanner y parser pasaron, aunque haya errores semanticos.</summary>
     public bool ParseSuccess =>
         LexErrors.Count == 0 && ParseErrors.Count == 0;
+
+    /// <summary>
+    /// Cuadruplos generados durante el analisis semantico (Entrega 3).
+    /// Null si el parser fallo o si no se llego a la fase semantica.
+    /// </summary>
+    public IReadOnlyList<Quadruple>? Quads => Semantic?.Quads;
 }
 
 /// <summary>
 /// Punto unico de entrada para correr el front-end (scanner + parser + analisis
-/// semantico) sobre una fuente Patito. Esta clase la consume tanto el ejecutable
-/// como los tests.
+/// semantico + generacion de cuadruplos) sobre una fuente Patito.
 /// </summary>
 public static class PatitoFrontEnd
 {
@@ -48,7 +54,6 @@ public static class PatitoFrontEnd
         lexer.RemoveErrorListeners();
         lexer.AddErrorListener(lexErrorListener);
 
-        // Materializamos la lista de tokens para poder reportarlos despues.
         var tokenStream = new CommonTokenStream(lexer);
         tokenStream.Fill();
         var tokens = new List<IToken>(tokenStream.GetTokens());
@@ -66,7 +71,6 @@ public static class PatitoFrontEnd
         }
         catch (RecognitionException ex)
         {
-            // ANTLR normalmente reporta esto via el listener; este catch es defensivo.
             parseErrorListener.SyntaxError(
                 System.Console.Error, parser,
                 ex.OffendingToken,
@@ -75,10 +79,7 @@ public static class PatitoFrontEnd
                 ex.Message, ex);
         }
 
-        // ---- 3. ANALISIS SEMANTICO ------------------------------------------
-        // Solo corremos el analizador semantico si el parser produjo un arbol;
-        // si hubo errores sintacticos no tendria sentido (y podria fallar al
-        // tocar contextos incompletos).
+        // ---- 3. ANALISIS SEMANTICO + GENERACION DE CUADRUPLOS --------------
         SemanticAnalyzer? analyzer = null;
         IReadOnlyList<SemanticError> semErrors = System.Array.Empty<SemanticError>();
         if (tree is not null && parseErrorListener.Errors.Count == 0)

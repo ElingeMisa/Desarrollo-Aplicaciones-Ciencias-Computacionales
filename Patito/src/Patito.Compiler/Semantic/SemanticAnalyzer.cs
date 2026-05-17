@@ -11,69 +11,38 @@
 //      etc.). En la implementacion via ANTLR4, cada metodo Enter/Exit de un
 //      Listener es candidato a contener un punto neuralgico.
 //
-//  Puntos neuralgicos implementados en esta Entrega (declaraciones):
+//  Puntos neuralgicos implementados en Entrega 2 (declaraciones):
 //
-//      [PN-1]  EnterPrograma:
-//                * registra el nombre del programa en el directorio
-//                * llama a ProcessVars para los globales y a ProcessFuncs
-//                  para todas las funciones.
+//      [PN-1]  EnterPrograma      : registra programa + globales + funciones.
+//      [PN-2]  ProcessVars        : declara cada ID en su VariableTable.
+//      [PN-3]  ProcessFuncs       : declara cada funcion con params y locales.
+//      [PN-4]  EnterAsigna        : valida existencia del ID destino.
+//      [PN-5]  EnterFactorSimple  : valida existencia del ID en expresion.
+//      [PN-6]  EnterLlamada       : valida existencia de la funcion invocada.
+//      [PN-7]  EnterFunc_body / ExitFunc_body : push/pop de alcance activo.
 //
-//      [PN-2]  ProcessVars (invocado para 'vars' global y para 'vars' local
-//              dentro de func_body):
-//                * recorre cada grupo 'ids : tipo ;' y agrega cada ID al
-//                  VariableTable correspondiente.
-//                * VALIDACION: si el ID ya existe en la tabla -> error
-//                  VariableRedeclared.
+//  Puntos neuralgicos implementados en Entrega 3 (generacion de cuadruplos):
 //
-//      [PN-3]  ProcessFuncs (recorre 'funcs'):
-//                * por cada funcion, construye FunctionInfo (nombre, tipo de
-//                  retorno) y registra en el directorio.
-//                * VALIDACION 1: si el nombre coincide con el del programa
-//                  -> error NameClashesWithProgram.
-//                * VALIDACION 2: si la funcion ya existe -> error
-//                  FunctionRedeclared.
-//                * Procesa parametros (los agrega a LocalTable con
-//                  SymbolKind.Parameter); VALIDACION: parametro duplicado
-//                  -> error ParameterRedeclared.
-//                * Procesa vars locales (los agrega a LocalTable); VALIDACION:
-//                  un local que choca con un parametro o con otro local
-//                  -> error VariableRedeclared.
-//
-//  Puntos neuralgicos secundarios (usos):
-//
-//      [PN-4]  EnterAsigna:
-//                * VALIDACION: la variable destino debe existir en el alcance
-//                  visible (local primero, luego global). Si no existe
-//                  -> error UndeclaredVariable.
-//
-//      [PN-5]  EnterFactorSimple:
-//                * VALIDACION: cada ID usado en una expresion debe existir
-//                  en el alcance visible -> error UndeclaredVariable.
-//
-//      [PN-6]  EnterLlamada:
-//                * VALIDACION: la funcion invocada debe estar registrada
-//                  en el directorio -> error UndeclaredFunction.
-//
-//  El soporte completo del cubo semantico (verificar tipos en cada operacion
-//  y en cada asignacion) requiere apilar tipos durante el recorrido, lo cual
-//  pertenece a la Entrega 3. Por ahora el cubo esta implementado y
-//  testeado, listo para conectarse.
-//
-//  ESTRATEGIA DE ALCANCE:
-//
-//    * Cuando ProcessFuncs procesa una funcion, registra sus simbolos en
-//      FunctionInfo.LocalTable inmediatamente, de modo que cuando el walker
-//      visita los estatutos del cuerpo de la funcion, basta con saber "en
-//      que funcion estoy" para resolver una variable.
-//    * Para saber "en que funcion estoy" durante el walker, mantenemos el
-//      mapa _funcByBody (Func_bodyContext -> FunctionInfo). En EnterFunc_body
-//      hacemos push de la funcion al stack; en ExitFunc_body, pop. Asi los
-//      lookups en EnterAsigna / EnterFactorSimple / EnterLlamada consultan
-//      la funcion activa.
+//      [PN-8]  ExitFactorSimple   : apila operando y tipo en las pilas.
+//      [PN-9]  ExitTermino        : aplica * / en las pilas y emite cuadruplos.
+//      [PN-10] ExitExp            : aplica + - en las pilas y emite cuadruplos.
+//      [PN-11] ExitExpresion      : aplica operador relacional; emite GotoF si
+//                                   la expresion es condicion de si/mientras.
+//      [PN-12] ExitAsigna         : valida tipos con el cubo y emite Assign.
+//      [PN-13] ExitImp            : emite Print para cada elemento de escribe().
+//      [PN-14] EnterCiclo         : guarda el indice de inicio del ciclo.
+//      [PN-15] ExitCuerpo         : al salir del cuerpo de un si con sino,
+//                                   emite Goto y hace Backfill del GotoF.
+//      [PN-16] ExitCondicion      : hace Backfill del Goto (con sino) o del
+//                                   GotoF (sin sino).
+//      [PN-17] ExitCiclo          : emite Goto al inicio y hace Backfill del
+//                                   GotoF de la condicion del mientras.
+//      [PN-18] ExitCall_stmt      : emite Param + Gosub para llamadas de funcion.
 // =============================================================================
 
 using System.Collections.Generic;
 using Antlr4.Runtime.Tree;
+using Patito.Compiler.CodeGen;
 using Patito.Compiler.Generated;
 
 namespace Patito.Compiler.Semantic;
@@ -83,49 +52,52 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
     private readonly FunctionDirectory _directory = new();
     private readonly List<SemanticError> _errors = new();
 
-    // Mapa Func_bodyContext -> FunctionInfo: nos permite saber, al entrar
-    // a un cuerpo de funcion, en que funcion estamos sin tener que recorrer
-    // de nuevo la lista de funcs.
+    // Mapa Func_bodyContext -> FunctionInfo: nos permite saber en que funcion
+    // estamos sin tener que recorrer de nuevo la lista de funcs.
     private readonly Dictionary<PatitoParser.Func_bodyContext, FunctionInfo> _funcByBody = new();
 
-    // Pila de funciones activas. Normalmente tiene 0 o 1 elemento (Patito no
-    // admite funciones anidadas), pero usamos pila por robustez.
+    // Pila de funciones activas (0 o 1 elemento en Patito, sin anidamiento).
     private readonly Stack<FunctionInfo> _scopeStack = new();
 
+    // --- Estructuras de Entrega 3 -------------------------------------------
+    // Emitter que agrupa las tres pilas (Operadores, Operandos, Tipos) y la
+    // fila de cuadruplos.
+    private readonly QuadrupleEmitter _emitter = new();
+
+    // Pilas de saltos pendientes de backfill para si/sino y mientras.
+    private readonly Stack<int> _pendingGotoF = new(); // indices de GotoF a resolver
+    private readonly Stack<int> _pendingGoto  = new(); // indices de Goto (entre si y sino)
+    private readonly Stack<int> _cicloStart   = new(); // indice de inicio de cada mientras
+
     // ---- API publica ----------------------------------------------------------
-    public FunctionDirectory Directory => _directory;
-    public VariableTable GlobalTable => _directory.GlobalTable;
+    public FunctionDirectory Directory  => _directory;
+    public VariableTable GlobalTable    => _directory.GlobalTable;
     public IReadOnlyList<SemanticError> Errors => _errors;
-    public bool HasErrors => _errors.Count > 0;
-    public SemanticCube Cube => SemanticCube.Default;
-    public string? ProgramName => _directory.ProgramName;
+    public bool HasErrors               => _errors.Count > 0;
+    public SemanticCube Cube            => SemanticCube.Default;
+    public string? ProgramName          => _directory.ProgramName;
+    public QuadrupleEmitter Emitter     => _emitter;
+    public IReadOnlyList<Quadruple> Quads => _emitter.Fila.Quads;
 
     // ==========================================================================
-    //  [PN-1] EnterPrograma: pasada de declaraciones (puntos PN-2 y PN-3).
+    //  [PN-1] EnterPrograma: pasada de declaraciones (PN-2 y PN-3).
     // ==========================================================================
     public override void EnterPrograma(PatitoParser.ProgramaContext ctx)
     {
         var idNode = ctx.ID();
         _directory.ProgramName = idNode?.GetText();
 
-        // ----- Vars globales [PN-2] ----------------------------------------
         var varsCtx = ctx.vars();
         if (varsCtx is not null)
-        {
             ProcessVars(varsCtx, _directory.GlobalTable);
-        }
 
-        // ----- Funciones [PN-3] --------------------------------------------
         var funcsCtx = ctx.funcs();
         if (funcsCtx is not null)
-        {
             ProcessFuncs(funcsCtx);
-        }
     }
 
     // ==========================================================================
-    //  [PN-2] ProcessVars: registra cada ID en la tabla con validacion de doble
-    //  declaracion.
+    //  [PN-2] ProcessVars: registra cada ID en la tabla con validacion.
     // ==========================================================================
     private void ProcessVars(PatitoParser.VarsContext varsCtx, VariableTable table)
     {
@@ -140,16 +112,10 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         {
             var tipo = ParseTipo(tipos[g]);
             foreach (var idNode in grupos[g].ID())
-            {
                 DeclareVariable(table, idNode, tipo, SymbolKind.Variable);
-            }
         }
     }
 
-    /// <summary>
-    /// Punto neuralgico unitario: agregar un simbolo a la tabla con validacion
-    /// de doble declaracion. Tambien lo usamos para parametros.
-    /// </summary>
     private void DeclareVariable(VariableTable table, ITerminalNode idNode, SemanticType type, SymbolKind kind)
     {
         var name = idNode.GetText();
@@ -159,7 +125,6 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
 
         if (!table.TryDeclare(sym))
         {
-            // VALIDACION: variable doblemente declarada
             var prev = table.Lookup(name)!;
             var what = kind == SymbolKind.Parameter ? "Parametro" : "Variable";
             var code = kind == SymbolKind.Parameter
@@ -172,50 +137,40 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
     }
 
     // ==========================================================================
-    //  [PN-3] ProcessFuncs: registra cada funcion en el directorio y llena su
-    //  tabla local con parametros y locales (con todas las validaciones).
+    //  [PN-3] ProcessFuncs: registra cada funcion con params y locales.
     // ==========================================================================
     private void ProcessFuncs(PatitoParser.FuncsContext funcsCtx)
     {
-        // El numero de funciones se infiere por la cantidad de IDs en este nivel.
-        // (typo_fun ID LPAREN params RPAREN func_body SEMICOLON)*
         var idArray = funcsCtx.ID();
         if (idArray is null) return;
         int n = idArray.Length;
 
         for (int i = 0; i < n; i++)
         {
-            var idNode = funcsCtx.ID(i);
-            var name   = idNode.GetText();
-            int line   = idNode.Symbol.Line;
-            int col    = idNode.Symbol.Column + 1;
-
+            var idNode     = funcsCtx.ID(i);
+            var name       = idNode.GetText();
+            int line       = idNode.Symbol.Line;
+            int col        = idNode.Symbol.Column + 1;
             var returnType = ParseTypoFun(funcsCtx.typo_fun(i));
             var info       = new FunctionInfo(name, returnType, line, col);
 
-            // ----- VALIDACION 1: nombre choca con el del programa ----------
             if (_directory.ProgramName is not null &&
                 string.Equals(name, _directory.ProgramName, System.StringComparison.Ordinal))
             {
                 _errors.Add(new SemanticError(line, col,
                     SemanticErrorCode.NameClashesWithProgram, name,
                     $"La funcion '{name}' usa el mismo identificador que el programa."));
-                // Aun asi seguimos para validar el cuerpo (mejor diagnostico).
             }
 
-            // ----- VALIDACION 2: funcion ya declarada ----------------------
             if (!_directory.TryDeclare(info))
             {
                 var prev = _directory.Lookup(name)!;
                 _errors.Add(new SemanticError(line, col,
                     SemanticErrorCode.FunctionRedeclared, name,
                     $"Funcion '{name}' ya fue declarada en {prev.Line}:{prev.Column}."));
-                // Saltamos a la siguiente funcion: no tiene sentido llenar
-                // una tabla local que no podremos referenciar.
                 continue;
             }
 
-            // ----- Parametros ----------------------------------------------
             var paramsCtx = funcsCtx.@params(i);
             if (paramsCtx is not null)
             {
@@ -226,48 +181,36 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
                     for (int p = 0; p < ids.Length; p++)
                     {
                         var pType = ParseTipo(ts[p]);
-                        // Antes de declarar contamos el tipo en la firma; aun
-                        // si el nombre se duplica, el aridad y tipos deben
-                        // verse igual desde la perspectiva de la llamada.
                         info.ParameterTypes.Add(pType);
                         DeclareVariable(info.LocalTable, ids[p], pType, SymbolKind.Parameter);
                     }
                 }
             }
 
-            // ----- Variables locales (del func_body.vars) ------------------
             var bodyCtx = funcsCtx.func_body(i);
-            _funcByBody[bodyCtx] = info; // <-- para PN-4..PN-6 saber el scope
+            _funcByBody[bodyCtx] = info;
 
             var localVars = bodyCtx.vars();
             if (localVars is not null)
-            {
                 ProcessVars(localVars, info.LocalTable);
-            }
         }
     }
 
     // ==========================================================================
-    //  Manejo del alcance activo (push/pop). Permite que EnterAsigna, etc.
-    //  resuelvan variables locales antes que globales.
+    //  [PN-7] Manejo del alcance activo (push/pop).
     // ==========================================================================
     public override void EnterFunc_body(PatitoParser.Func_bodyContext ctx)
     {
         if (_funcByBody.TryGetValue(ctx, out var info))
-        {
             _scopeStack.Push(info);
-        }
     }
 
     public override void ExitFunc_body(PatitoParser.Func_bodyContext ctx)
     {
         if (_scopeStack.Count > 0)
-        {
             _scopeStack.Pop();
-        }
     }
 
-    /// <summary>Funcion actualmente activa en el recorrido, o null si estamos en el cuerpo principal.</summary>
     private FunctionInfo? CurrentFunction => _scopeStack.Count > 0 ? _scopeStack.Peek() : null;
 
     private Symbol? LookupVariable(string name)
@@ -302,7 +245,7 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         var atom = ctx.simple_atom();
         if (atom is null) return;
         var id = atom.ID();
-        if (id is null) return; // es una constante, no un ID
+        if (id is null) return;
 
         var name = id.GetText();
         if (LookupVariable(name) is null)
@@ -329,6 +272,379 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
                 SemanticErrorCode.UndeclaredFunction, name,
                 $"Funcion '{name}' invocada sin declaracion previa."));
         }
+    }
+
+    // ==========================================================================
+    //  [PN-8] ExitFactorSimple : apila el operando y su tipo.
+    // ==========================================================================
+    public override void ExitFactorSimple(PatitoParser.FactorSimpleContext ctx)
+    {
+        var atom = ctx.simple_atom();
+        if (atom is null) return;
+
+        string name;
+        SemanticType type;
+
+        if (atom.ID() is not null)
+        {
+            name = atom.ID().GetText();
+            var sym = LookupVariable(name);
+            type = sym?.Type ?? SemanticType.Error;
+        }
+        else
+        {
+            var cte = atom.cte();
+            if (cte?.CTE_FLOT() is not null)
+            {
+                name = cte.GetText();
+                type = SemanticType.Flotante;
+            }
+            else
+            {
+                name = cte?.GetText() ?? "0";
+                type = SemanticType.Entero;
+            }
+        }
+
+        // Signo unario negativo
+        if (ctx.OP_MENOS() is not null)
+        {
+            if (atom.ID() is not null)
+            {
+                // Variable con signo negativo: emitir t = 0 - var
+                var temp = _emitter.NewTemp();
+                _emitter.Fila.Emit(QuadOp.Neg, null, name, temp);
+                name = temp;
+            }
+            else
+            {
+                name = "-" + name;
+            }
+        }
+
+        _emitter.PushOperand(name, type);
+    }
+
+    // ==========================================================================
+    //  [PN-9] ExitTermino : aplica * y / (mayor precedencia).
+    // ==========================================================================
+    public override void ExitTermino(PatitoParser.TerminoContext ctx)
+    {
+        int n = ctx.factor().Length;
+        if (n == 1) return; // Un solo factor, ya esta en las pilas
+
+        // Los n operandos estan en las pilas en orden de evaluacion
+        // (el ultimo en el tope). Sacarlos en orden para procesarlos izq->der.
+        var names = new string[n];
+        var types = new SemanticType[n];
+        for (int i = n - 1; i >= 0; i--)
+        {
+            types[i] = _emitter.Tipos.Pop();
+            names[i] = _emitter.Operandos.Pop();
+        }
+
+        string leftName = names[0];
+        SemanticType leftType = types[0];
+        int opIdx = 0;
+
+        // Recorrer hijos para obtener operadores en orden izquierda-derecha
+        foreach (var child in ctx.children)
+        {
+            if (child is not ITerminalNode tn) continue;
+            QuadOp? qop = tn.Symbol.Type switch
+            {
+                PatitoLexer.OP_POR => QuadOp.Times,
+                PatitoLexer.OP_DIV => QuadOp.Divide,
+                _ => (QuadOp?)null,
+            };
+            if (qop is null) continue;
+
+            var rightName = names[++opIdx];
+            var rightType = types[opIdx];
+            var (rn, rt) = _emitter.EmitBinary(qop.Value, leftName, leftType, rightName, rightType);
+
+            if (rt == SemanticType.Error)
+            {
+                _errors.Add(new SemanticError(
+                    ctx.Start.Line, ctx.Start.Column + 1,
+                    SemanticErrorCode.TypeMismatch, "",
+                    $"Tipos incompatibles en operacion '{qop.Value.ToSymbol()}': " +
+                    $"{leftType.ToLexeme()} y {rightType.ToLexeme()}."));
+            }
+            leftName = rn;
+            leftType = rt;
+        }
+
+        _emitter.PushOperand(leftName, leftType);
+    }
+
+    // ==========================================================================
+    //  [PN-10] ExitExp : aplica + y - (menor precedencia que * /).
+    // ==========================================================================
+    public override void ExitExp(PatitoParser.ExpContext ctx)
+    {
+        int n = ctx.termino().Length;
+        if (n == 1) return;
+
+        var names = new string[n];
+        var types = new SemanticType[n];
+        for (int i = n - 1; i >= 0; i--)
+        {
+            types[i] = _emitter.Tipos.Pop();
+            names[i] = _emitter.Operandos.Pop();
+        }
+
+        string leftName = names[0];
+        SemanticType leftType = types[0];
+        int opIdx = 0;
+
+        foreach (var child in ctx.children)
+        {
+            if (child is not ITerminalNode tn) continue;
+            QuadOp? qop = tn.Symbol.Type switch
+            {
+                PatitoLexer.OP_MAS   => QuadOp.Plus,
+                PatitoLexer.OP_MENOS => QuadOp.Minus,
+                _ => (QuadOp?)null,
+            };
+            if (qop is null) continue;
+
+            var rightName = names[++opIdx];
+            var rightType = types[opIdx];
+            var (rn, rt) = _emitter.EmitBinary(qop.Value, leftName, leftType, rightName, rightType);
+
+            if (rt == SemanticType.Error)
+            {
+                _errors.Add(new SemanticError(
+                    ctx.Start.Line, ctx.Start.Column + 1,
+                    SemanticErrorCode.TypeMismatch, "",
+                    $"Tipos incompatibles en operacion '{qop.Value.ToSymbol()}': " +
+                    $"{leftType.ToLexeme()} y {rightType.ToLexeme()}."));
+            }
+            leftName = rn;
+            leftType = rt;
+        }
+
+        _emitter.PushOperand(leftName, leftType);
+    }
+
+    // ==========================================================================
+    //  [PN-11] ExitExpresion : aplica operador relacional si lo hay y, si la
+    //          expresion es condicion de un si/mientras, emite GotoF.
+    // ==========================================================================
+    public override void ExitExpresion(PatitoParser.ExpresionContext ctx)
+    {
+        if (ctx.rel_op() is not null)
+        {
+            // Hay operador relacional: sacar los dos operandos
+            var rightType = _emitter.Tipos.Pop();
+            var rightName = _emitter.Operandos.Pop();
+            var leftType  = _emitter.Tipos.Pop();
+            var leftName  = _emitter.Operandos.Pop();
+
+            var relCtx = ctx.rel_op();
+            QuadOp op;
+            if      (relCtx.OP_LT()  is not null) op = QuadOp.Lt;
+            else if (relCtx.OP_GT()  is not null) op = QuadOp.Gt;
+            else if (relCtx.OP_EQ()  is not null) op = QuadOp.Eq;
+            else                                   op = QuadOp.Neq;
+
+            var (rn, rt) = _emitter.EmitBinary(op, leftName, leftType, rightName, rightType);
+
+            if (rt == SemanticType.Error)
+            {
+                _errors.Add(new SemanticError(
+                    ctx.Start.Line, ctx.Start.Column + 1,
+                    SemanticErrorCode.TypeMismatch, "",
+                    $"Tipos incompatibles en operacion relacional '{op.ToSymbol()}': " +
+                    $"{leftType.ToLexeme()} y {rightType.ToLexeme()}."));
+            }
+
+            _emitter.PushOperand(rn, rt);
+        }
+
+        // Si la expresion es la condicion de un si o un mientras, emitir GotoF
+        MaybeEmitGotoF(ctx);
+    }
+
+    // Emite un GotoF si esta expresion es condicion de si/mientras.
+    private void MaybeEmitGotoF(PatitoParser.ExpresionContext ctx)
+    {
+        if (ctx.Parent is not PatitoParser.CondicionContext &&
+            ctx.Parent is not PatitoParser.CicloContext) return;
+
+        if (_emitter.Tipos.IsEmpty) return;
+        _emitter.Tipos.Pop();
+        var condName = _emitter.Operandos.Pop();
+        int gfIdx = _emitter.Fila.Emit(QuadOp.GotoF, condName, null, "?");
+        _pendingGotoF.Push(gfIdx);
+    }
+
+    // ==========================================================================
+    //  [PN-12] ExitAsigna : valida tipos con el cubo y emite Assign.
+    // ==========================================================================
+    public override void ExitAsigna(PatitoParser.AsignaContext ctx)
+    {
+        var idNode = ctx.ID();
+        if (idNode is null) return;
+        var destName = idNode.GetText();
+        var destSym  = LookupVariable(destName);
+
+        // La expresion siempre deja un resultado en las pilas; hay que sacarlo
+        // incluso en caso de error para mantener las pilas consistentes.
+        if (_emitter.Tipos.IsEmpty) return;
+        var exprType = _emitter.Tipos.Pop();
+        var exprName = _emitter.Operandos.Pop();
+
+        if (destSym is null) return; // UndeclaredVariable ya reportado en PN-4
+
+        var resultType = SemanticCube.Default.Resolve(destSym.Type, SemanticOp.Assign, exprType);
+        if (resultType == SemanticType.Error)
+        {
+            _errors.Add(new SemanticError(
+                idNode.Symbol.Line, idNode.Symbol.Column + 1,
+                SemanticErrorCode.TypeMismatch, destName,
+                $"No se puede asignar {exprType.ToLexeme()} a '{destName}' de tipo {destSym.Type.ToLexeme()}."));
+            return;
+        }
+
+        _emitter.Fila.Emit(QuadOp.Assign, exprName, null, destName);
+    }
+
+    // ==========================================================================
+    //  [PN-13] ExitImp : emite Print para cada elemento de escribe().
+    // ==========================================================================
+    public override void ExitImp(PatitoParser.ImpContext ctx)
+    {
+        if (ctx.LETRERO() is not null)
+        {
+            _emitter.Fila.Emit(QuadOp.Print, null, null, ctx.LETRERO().GetText());
+        }
+        else
+        {
+            if (_emitter.Tipos.IsEmpty) return;
+            _emitter.Tipos.Pop();
+            var exprName = _emitter.Operandos.Pop();
+            _emitter.Fila.Emit(QuadOp.Print, null, null, exprName);
+        }
+    }
+
+    // ==========================================================================
+    //  [PN-14] EnterCiclo : guarda el indice de inicio del ciclo.
+    // ==========================================================================
+    public override void EnterCiclo(PatitoParser.CicloContext ctx)
+    {
+        _cicloStart.Push(_emitter.Fila.Count);
+    }
+
+    // ==========================================================================
+    //  [PN-15] ExitCuerpo : al salir del cuerpo-si (cuando hay sino) emite
+    //          Goto y hace Backfill del GotoF hacia el inicio del sino.
+    // ==========================================================================
+    public override void ExitCuerpo(PatitoParser.CuerpoContext ctx)
+    {
+        if (ctx.Parent is not PatitoParser.CondicionContext condCtx) return;
+        if (condCtx.KW_SINO() is null) return;
+        if (condCtx.cuerpo(0) != ctx) return; // solo aplica al primer cuerpo (si-body)
+
+        // Emitir Goto para saltar el bloque sino una vez ejecutado el si-body
+        int gotoIdx = _emitter.Fila.Emit(QuadOp.Goto, null, null, "?");
+        _pendingGoto.Push(gotoIdx);
+
+        // Backfill del GotoF: el sino empieza en el siguiente cuadruplo
+        if (_pendingGotoF.Count > 0)
+        {
+            int gfIdx = _pendingGotoF.Pop();
+            _emitter.Fila.Backfill(gfIdx, _emitter.Fila.Count.ToString());
+        }
+    }
+
+    // ==========================================================================
+    //  [PN-16] ExitCondicion : hace Backfill del Goto (con sino) o del GotoF
+    //          (sin sino) al final del estatuto completo.
+    // ==========================================================================
+    public override void ExitCondicion(PatitoParser.CondicionContext ctx)
+    {
+        int current = _emitter.Fila.Count;
+        if (ctx.KW_SINO() is not null)
+        {
+            // Backfill del Goto (emitido en PN-15 antes del bloque sino)
+            if (_pendingGoto.Count > 0)
+                _emitter.Fila.Backfill(_pendingGoto.Pop(), current.ToString());
+        }
+        else
+        {
+            // Backfill del GotoF directamente al final del si
+            if (_pendingGotoF.Count > 0)
+                _emitter.Fila.Backfill(_pendingGotoF.Pop(), current.ToString());
+        }
+    }
+
+    // ==========================================================================
+    //  [PN-17] ExitCiclo : emite Goto al inicio y resuelve el GotoF.
+    // ==========================================================================
+    public override void ExitCiclo(PatitoParser.CicloContext ctx)
+    {
+        if (_cicloStart.Count > 0)
+            _emitter.Fila.Emit(QuadOp.Goto, null, null, _cicloStart.Pop().ToString());
+
+        if (_pendingGotoF.Count > 0)
+            _emitter.Fila.Backfill(_pendingGotoF.Pop(), _emitter.Fila.Count.ToString());
+    }
+
+    // ==========================================================================
+    //  [PN-18] ExitCall_stmt : emite Param (por cada arg) y Gosub.
+    // ==========================================================================
+    public override void ExitCall_stmt(PatitoParser.Call_stmtContext ctx)
+    {
+        var llamada = ctx.llamada();
+        if (llamada is null) return;
+        var funcName = llamada.ID()?.GetText();
+        if (funcName is null) return;
+
+        // Los argumentos ya fueron evaluados; sus nombres estan en las pilas
+        // en orden de evaluacion (el ultimo arg en el tope).
+        int nArgs = llamada.args()?.expresion()?.Length ?? 0;
+        var argNames = new string[nArgs];
+        for (int i = nArgs - 1; i >= 0; i--)
+        {
+            _emitter.Tipos.Pop();
+            argNames[i] = _emitter.Operandos.Pop();
+        }
+        foreach (var arg in argNames)
+            _emitter.Fila.Emit(QuadOp.Param, null, null, arg);
+
+        _emitter.Fila.Emit(QuadOp.Gosub, null, null, funcName);
+    }
+
+    // ==========================================================================
+    //  FactorLlamada: funcion invocada como operando dentro de una expresion.
+    //  Mantiene las pilas consistentes emitiendo Gosub y apilando el retorno.
+    // ==========================================================================
+    public override void ExitFactorLlamada(PatitoParser.FactorLlamadaContext ctx)
+    {
+        var llamada = ctx.llamada();
+        if (llamada is null) return;
+        var funcName = llamada.ID()?.GetText();
+        if (funcName is null) return;
+
+        int nArgs = llamada.args()?.expresion()?.Length ?? 0;
+        var argNames = new string[nArgs];
+        for (int i = nArgs - 1; i >= 0; i--)
+        {
+            _emitter.Tipos.Pop();
+            argNames[i] = _emitter.Operandos.Pop();
+        }
+        foreach (var arg in argNames)
+            _emitter.Fila.Emit(QuadOp.Param, null, null, arg);
+
+        _emitter.Fila.Emit(QuadOp.Gosub, null, null, funcName);
+
+        // Apilar valor de retorno para que el padre (termino/exp) lo consuma
+        SemanticType returnType = SemanticType.Error;
+        if (_directory.TryLookup(funcName, out var info))
+            returnType = info.ReturnType;
+        _emitter.PushOperand($"{funcName}_ret", returnType);
     }
 
     // ==========================================================================

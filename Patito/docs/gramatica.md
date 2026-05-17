@@ -210,3 +210,97 @@ ANTLR4 usa el algoritmo **ALL(*)** (adaptive LL with arbitrary lookahead). En la
 - El parser produce un *parse tree* concreto (no un AST). El análisis semántico ([`puntos_neuralgicos.md`](puntos_neuralgicos.md)) trabaja directamente sobre ese árbol vía un `Listener`.
 
 Si en una futura entrega se necesita un AST compacto, la opción más natural es agregar un visitor que transforme el parse tree; por el momento no es necesario.
+
+---
+
+## Puntos neurálgicos en la gramática (Entregas 2 y 3)
+
+La siguiente tabla muestra, para cada producción relevante, qué puntos neurálgicos se enganchan en ella y cuál es la acción que realizan. Los puntos PN-1..PN-7 corresponden a la Entrega 2 (declaraciones y validación de uso); los puntos PN-8..PN-18 corresponden a la Entrega 3 (generación de cuádruplos).
+
+```
+programa : KW_PROGRAMA ID SEMICOLON vars funcs KW_INICIO cuerpo KW_FIN
+           ▲
+           PN-1 (EnterPrograma) — registra ProgramName, dispara PN-2 y PN-3
+
+vars / listado_vars
+           ▲
+           PN-2 (ProcessVars) — declara cada ID en su VariableTable
+
+funcs : (typo_fun ID LPAREN params RPAREN func_body SEMICOLON)*
+                                           ▲
+           PN-3 (ProcessFuncs) — registra función, llena params y locales
+           PN-7 (EnterFunc_body / ExitFunc_body) — push/pop de alcance activo
+
+asigna : ID OP_ASIGNA expresion SEMICOLON
+         ▲                               ▲
+     PN-4 (EnterAsigna)           PN-12 (ExitAsigna)
+     valida que ID exista          consulta cubo, emite Assign
+
+expresion : exp ( rel_op exp )?
+                              ▲
+                    PN-11 (ExitExpresion)
+                    aplica rel_op + MaybeEmitGotoF
+
+exp : termino ( (OP_MAS | OP_MENOS) termino )*
+                                             ▲
+                                  PN-10 (ExitExp)
+                                  aplica + / -
+
+termino : factor ( (OP_POR | OP_DIV) factor )*
+                                             ▲
+                                  PN-9 (ExitTermino)
+                                  aplica * / /
+
+factor : LPAREN expresion RPAREN    → sin acción adicional (result ya en pilas)
+       | llamada                    → PN-18 / ExitFactorLlamada
+       | (OP_MAS | OP_MENOS)? simple_atom
+         ▲                     ▲
+     PN-5 (EnterFactorSimple)  PN-8 (ExitFactorSimple)
+     valida ID en expresión    apila operando y tipo
+
+condicion : KW_SI LPAREN expresion RPAREN cuerpo (KW_SINO cuerpo)? SEMICOLON
+                          ▲               ▲                  ▲     ▲
+                     PN-11b              PN-15             PN-15  PN-16
+                  MaybeEmitGotoF    ExitCuerpo(si)  ExitCuerpo(sino) ExitCondicion
+
+ciclo : KW_MIENTRAS LPAREN expresion RPAREN KW_HAZ cuerpo SEMICOLON
+        ▲                  ▲                              ▲
+     PN-14               PN-11b                        PN-17
+   EnterCiclo         MaybeEmitGotoF               ExitCiclo
+
+imprime : KW_ESCRIBE LPAREN imp (COMA imp)* RPAREN SEMICOLON
+                            ▲
+                         PN-13 (ExitImp) — emite Print
+
+llamada : ID LPAREN args? RPAREN
+          ▲
+     PN-6 (EnterLlamada) — valida que la función exista
+
+call_stmt : llamada SEMICOLON
+                            ▲
+                      PN-18 (ExitCall_stmt) — emite Param* + Gosub
+```
+
+### Leyenda de acciones
+
+| Código | Método en SemanticAnalyzer | Acción resumida |
+|--------|---------------------------|-----------------|
+| PN-1   | `EnterPrograma`           | Registra nombre del programa, inicia pasada de declaraciones. |
+| PN-2   | `ProcessVars` (helper)    | Declara cada ID en la `VariableTable` activa. |
+| PN-3   | `ProcessFuncs` (helper)   | Registra función con params y vars locales en el directorio. |
+| PN-4   | `EnterAsigna`             | Valida que la variable destino esté declarada. |
+| PN-5   | `EnterFactorSimple`       | Valida que el ID referenciado en una expresión esté declarado. |
+| PN-6   | `EnterLlamada`            | Valida que la función invocada esté en el directorio. |
+| PN-7   | `EnterFunc_body` / `ExitFunc_body` | Push / pop del alcance de función activo. |
+| PN-8   | `ExitFactorSimple`        | Apila nombre y tipo del operando en PilaOperandos / PilaTipos. |
+| PN-9   | `ExitTermino`             | Emite cuádruplos para `*` y `/`; deja resultado en las pilas. |
+| PN-10  | `ExitExp`                 | Emite cuádruplos para `+` y `-`; deja resultado en las pilas. |
+| PN-11  | `ExitExpresion`           | Emite cuádruplo para el operador relacional (si existe). |
+| PN-11b | `MaybeEmitGotoF` (helper) | Emite GotoF cuando la expresión es condición de `si`/`mientras`. |
+| PN-12  | `ExitAsigna`              | Valida tipos con el cubo y emite `Assign`. |
+| PN-13  | `ExitImp`                 | Emite `Print` para cada elemento de `escribe()`. |
+| PN-14  | `EnterCiclo`              | Guarda el índice de inicio del ciclo. |
+| PN-15  | `ExitCuerpo`              | (Si-body con sino) emite `Goto` y hace `Backfill` del GotoF. |
+| PN-16  | `ExitCondicion`           | Hace `Backfill` del Goto (con sino) o del GotoF (sin sino). |
+| PN-17  | `ExitCiclo`               | Emite `Goto` al inicio y hace `Backfill` del GotoF. |
+| PN-18  | `ExitCall_stmt`           | Emite `Param` por cada arg y `Gosub`. |
