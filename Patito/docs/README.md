@@ -2,7 +2,7 @@
 
 Compilador del lenguaje **Patito** — *Víctor Misael Escalante Alvarado, A01741176*.
 
-Esta carpeta contiene toda la documentación técnica del proyecto. Cada archivo está organizado por **tema** (no por entrega) para que cualquier concepto se pueda consultar en un solo lugar, aun cuando varias entregas hayan aportado a él.
+Esta carpeta contiene toda la documentación técnica del proyecto. Cada archivo está organizado por **tema** para que cualquier concepto se pueda consultar en un solo lugar
 
 > El repositorio acompañante se encuentra en
 > <https://github.com/ElingeMisa/Desarrollo-Aplicaciones-Ciencias-Computacionales>.
