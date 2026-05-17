@@ -1,6 +1,8 @@
 # Puntos Neurálgicos del Análisis Semántico
 
-Un **punto neurálgico** es un instante específico durante el recorrido del árbol de derivación en el que el compilador realiza una acción semántica (registrar un símbolo, validar un tipo, emitir un cuadruplo, etc.). En la implementación con ANTLR4, cada método `EnterX`/`ExitX` del listener `SemanticAnalyzer` puede ser un punto neurálgico.
+> Documentación de la **Entrega 2** del compilador. Ver el [índice general](README.md) para más contexto.
+
+Un **punto neurálgico** es un instante específico durante el recorrido del árbol de derivación en el que el compilador realiza una acción semántica (registrar un símbolo, validar un tipo, emitir un cuadruplo, etc.). En la implementación con ANTLR4, cada método `EnterX`/`ExitX` del listener `SemanticAnalyzer` puede ser un punto neurálgico. Las reglas gramaticales en las que se enganchan estos métodos están detalladas en [`gramatica.md`](gramatica.md), y las estructuras que se llenan en cada punto, en [`estructuras.md`](estructuras.md).
 
 La siguiente tabla resume los puntos neurálgicos implementados en la Entrega 2, mapeando cada uno a su regla gramatical y a la(s) validación(es) que aplica.
 
@@ -94,3 +96,10 @@ Los siguientes son puntos neurálgicos planeados para la Entrega 3 (generación 
 - `EnterLlamada` con args: validar la aridad y el tipo de cada argumento contra `FunctionInfo.ParameterTypes`.
 
 Toda la infraestructura (cubo, pila de alcances, tablas pobladas) ya está en su lugar; lo que falta es apilar tipos durante el recorrido, que es la siguiente entrega.
+
+## Ver también
+
+- [`estructuras.md`](estructuras.md) — diseño de las tablas/directorio que cada punto neurálgico lee o escribe.
+- [`cubo_semantico.md`](cubo_semantico.md) — la tabla de tipos que se consultará en los puntos neurálgicos de Entrega 3.
+- [`gramatica.md`](gramatica.md) — las producciones (`asigna`, `llamada`, `factor`, etc.) que disparan cada `Enter…`.
+- [`pruebas.md`](pruebas.md) — pruebas end-to-end que validan cada uno de los puntos neurálgicos.

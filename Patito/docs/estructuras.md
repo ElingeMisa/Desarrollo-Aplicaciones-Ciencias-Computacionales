@@ -1,6 +1,8 @@
 # Estructuras del Análisis Semántico
 
-Este documento describe **qué** estructuras de datos elegimos para representar el Directorio de Funciones y las Tablas de Variables de Patito, **por qué** y **cuáles** operaciones se aplican sobre cada una.
+> Documentación de la **Entrega 2** del compilador. Ver el [índice general](README.md) para más contexto.
+
+Este documento describe **qué** estructuras de datos elegimos para representar el Directorio de Funciones y las Tablas de Variables de Patito, **por qué** y **cuáles** operaciones se aplican sobre cada una. El modelo de dos niveles de alcance (global y de función) viene directamente de las decisiones del lenguaje resumidas en [`lenguaje.md`](lenguaje.md).
 
 ## Mapa de clases
 
@@ -131,3 +133,10 @@ Es un `record` inmutable. El campo `Address` es el "hueco" reservado para la Ent
 4. Mientras el walker visita estatutos dentro de `func_body`, el analyzer empuja la función actual a una pila de alcances. Esto permite que `LookupVariable` resuelva primero contra la `LocalTable` activa y solo si falla consulte la `GlobalTable`.
 
 Resultado: al terminar el recorrido, el `FunctionDirectory` y la `GlobalTable` están **pobladas**, el cubo semántico está disponible para consultas, y la lista de errores semánticos contiene todas las violaciones detectadas.
+
+## Ver también
+
+- [`puntos_neuralgicos.md`](puntos_neuralgicos.md) — los `Enter…`/`Exit…` que llenan estas estructuras durante el recorrido del árbol.
+- [`cubo_semantico.md`](cubo_semantico.md) — la tabla de compatibilidad de tipos a la que estas estructuras dan contexto.
+- [`gramatica.md`](gramatica.md) — las producciones (`vars`, `funcs`, `func_body`, etc.) que disparan la creación de cada entrada.
+- [`pruebas.md`](pruebas.md) — pruebas unitarias de `VariableTable` y `FunctionDirectory`.

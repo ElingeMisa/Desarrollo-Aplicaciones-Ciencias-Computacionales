@@ -1,27 +1,50 @@
-# Patito Compiler — Entregas 1 + 2 (Scanner + Parser + Análisis Semántico)
+# Patito Compiler — Entregas 0, 1 y 2
 
 Compilador del lenguaje **Patito** (Víctor Misael Escalante Alvarado, A01741176).
 
-- **Entrega 1**: análisis léxico (scanner) y sintáctico (parser), generados con **ANTLR 4** sobre **C# / .NET 8+**.
-- **Entrega 2**: cubo semántico, tabla de variables, directorio de funciones y puntos neurálgicos para llenarlos con todas las validaciones pertinentes (variable doblemente declarada, función redeclarada, identificador no declarado, etc.).
+- **Entrega 0:** definición del lenguaje (expresiones regulares, BNF y diagramas de sintaxis).
+- **Entrega 1:** front-end con **ANTLR 4** sobre **C# / .NET 8+** (scanner y parser).
+- **Entrega 2:** análisis semántico — cubo semántico, tabla de variables, directorio de funciones y los puntos neurálgicos que las llenan con todas las validaciones pertinentes (variable doblemente declarada, función redeclarada, identificador no declarado, etc.).
+
+## Documentación
+
+Toda la documentación técnica vive en **[`docs/`](docs/)**. El [índice principal](docs/README.md) lleva a cada página, organizadas por **tema**:
+
+| Tema                            | Documento                                                                                    |
+|---------------------------------|----------------------------------------------------------------------------------------------|
+| Descripción del lenguaje        | [`docs/lenguaje.md`](docs/lenguaje.md)                                                       |
+| Análisis léxico (regex, tokens) | [`docs/lexico.md`](docs/lexico.md)                                                           |
+| Gramática (BNF y `.g4`)          | [`docs/gramatica.md`](docs/gramatica.md)                                                     |
+| Comparación y elección de tooling | [`docs/herramientas.md`](docs/herramientas.md)                                              |
+| Cubo semántico                   | [`docs/cubo_semantico.md`](docs/cubo_semantico.md)                                           |
+| Estructuras (`VariableTable`, `FunctionDirectory`) | [`docs/estructuras.md`](docs/estructuras.md)                                |
+| Puntos neurálgicos del listener  | [`docs/puntos_neuralgicos.md`](docs/puntos_neuralgicos.md)                                   |
+| Plan de pruebas                  | [`docs/pruebas.md`](docs/pruebas.md)                                                         |
 
 ## Descripcion del lenguaje
 
 ![Reglas](img/Reglas.png)
 
-## Estructura
+Para los detalles, ver [`docs/lenguaje.md`](docs/lenguaje.md).
+
+## Estructura del repositorio
 
 ```
 Patito-Compiler/
 ├── Patito.sln
-├── README.md
-├── docs/                                    Documentacion de las entregas
-│   ├── entrega2_analisis_semantico.md       Resumen general de Entrega 2
+├── README.md                                Este archivo (resumen + enlaces a docs/)
+├── docs/                                    Documentacion tecnica, por tema
+│   ├── README.md                            Indice principal
+│   ├── lenguaje.md                          Descripcion del lenguaje (Entrega 0)
+│   ├── lexico.md                            Tokens y expresiones regulares
+│   ├── gramatica.md                         BNF + reglas ANTLR4 con sus adaptaciones
+│   ├── herramientas.md                      Comparacion + eleccion de ANTLR4
 │   ├── cubo_semantico.md                    Tabla de consideraciones semanticas
-│   ├── estructuras.md                       Estructuras elegidas y operaciones
-│   └── puntos_neuralgicos.md                Listener: cada Enter/Exit y su validacion
+│   ├── estructuras.md                       Tabla de variables y directorio de funciones
+│   ├── puntos_neuralgicos.md                Listener: cada Enter/Exit y su validacion
+│   └── pruebas.md                           Plan de pruebas consolidado
 ├── examples/                                Programas .patito de prueba
-│   ├── 01_minimo.patito                    Casos validos
+│   ├── 01_minimo.patito                     Casos validos
 │   ├── 02_vars_y_asigna.patito
 │   ├── 03_condicion.patito
 │   ├── 04_ciclo.patito
@@ -37,7 +60,7 @@ Patito-Compiler/
 │   ├── Patito.Compiler.csproj               Proyecto de consola con ANTLR4
 │   ├── Patito.g4                            Gramatica unificada (lexer + parser)
 │   ├── Program.cs                           Driver CLI (patitoc)
-│   ├── PatitoFrontEnd.cs                    API in-process (corre scanner+parser+semantica)
+│   ├── PatitoFrontEnd.cs                    API in-process (scanner + parser + semantica)
 │   ├── PatitoErrorListener.cs               Captura de errores lexicos/sintacticos
 │   └── Semantic/                            ENTREGA 2
 │       ├── SemanticType.cs                  Enum de tipos (Entero, Flotante, Bool, Nula, Error)
@@ -61,7 +84,7 @@ Patito-Compiler/
 
 ## Cómo construir y correr
 
-Requisitos: **.NET 8 SDK o superior** (`dotnet --version` → 8.x o mayor). El proyecto está configurado para `net10.0`; ajuste `TargetFramework` en los `.csproj` si necesita una versión menor.
+Requisitos: **.NET 8 SDK o superior** (`dotnet --version` → 8.x o mayor). El proyecto está configurado para `net10.0`; ajusta `TargetFramework` en los `.csproj` si necesitas una versión menor.
 
 ANTLR4 se descarga automáticamente vía NuGet (`Antlr4.Runtime.Standard` + `Antlr4BuildTasks`); no necesitas instalar Java.
 
@@ -72,7 +95,7 @@ dotnet build
 # Correr el ejecutable contra un archivo
 dotnet run --project src/Patito.Compiler -- examples/02_vars_y_asigna.patito --tokens --tree
 
-# Imprimir solo el directorio de funciones y las tablas
+# Imprimir el directorio de funciones y las tablas
 dotnet run --project src/Patito.Compiler -- examples/05_funcion.patito --symbols
 
 # Demo embebido (sin archivos)
@@ -81,7 +104,7 @@ dotnet run --project src/Patito.Compiler -- --demo
 # Correr la suite de pruebas (lex + parse + semantica)
 dotnet test
 
-# Corre los test pero en una tabla comparativa
+# Corre los tests pero en una tabla comparativa
 source test-samples.sh
 ```
 
@@ -101,11 +124,6 @@ Categorías de errores reportados:
 - `[PARSE]` — error sintáctico (parser).
 - `[SEM]` — error semántico (Entrega 2: doble declaración, identificador no declarado, etc.).
 
-## Documentación de la Entrega 2
+## Repositorio remoto
 
-La documentación a profundidad vive en [`docs/`](docs/):
-
-- [`entrega2_analisis_semantico.md`](docs/entrega2_analisis_semantico.md) — visión general.
-- [`cubo_semantico.md`](docs/cubo_semantico.md) — la tabla de consideraciones semánticas (tipos × operadores → resultado).
-- [`estructuras.md`](docs/estructuras.md) — qué estructuras se eligieron para `VariableTable` y `FunctionDirectory`, por qué, y qué operaciones se aplican sobre ellas.
-- [`puntos_neuralgicos.md`](docs/puntos_neuralgicos.md) — cada `Enter…`/`Exit…` del listener mapeado a su acción semántica y a las validaciones que aplica.
+<https://github.com/ElingeMisa/Desarrollo-Aplicaciones-Ciencias-Computacionales>

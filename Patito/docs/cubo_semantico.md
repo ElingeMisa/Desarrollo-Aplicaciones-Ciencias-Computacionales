@@ -1,6 +1,10 @@
 # Cubo Semántico de Patito
 
+> Documentación de la **Entrega 2** del compilador. Ver el [índice general](README.md) para más contexto.
+
 El cubo semántico es la **tabla de consideraciones semánticas** del lenguaje. Centraliza, en una sola estructura consultable, todas las reglas de compatibilidad de tipos: dado un operador y los tipos de sus dos operandos, devuelve el tipo del resultado, o `Error` si la combinación está prohibida.
+
+Los tipos declarables (`entero`, `flotante`) y los implícitos (`Bool`, `Nula`) están descritos en [`lenguaje.md`](lenguaje.md); los operadores que el cubo reconoce coinciden con los tokens definidos en [`lexico.md`](lexico.md).
 
 ## Tipos modelados
 
@@ -86,3 +90,9 @@ bool ok = cube.IsCompatible(SemanticType.Entero, SemanticOp.Assign, SemanticType
 ```
 
 `SemanticCube.Default` es un singleton inmutable; no es necesario instanciarlo manualmente.
+
+## Ver también
+
+- [`estructuras.md`](estructuras.md) — cómo se conectan el cubo, la tabla de variables y el directorio de funciones.
+- [`puntos_neuralgicos.md`](puntos_neuralgicos.md) — qué punto del recorrido del árbol consulta el cubo.
+- [`pruebas.md`](pruebas.md) — las pruebas que aseguran cada celda del cubo (`SemanticCubeTests.cs`).
