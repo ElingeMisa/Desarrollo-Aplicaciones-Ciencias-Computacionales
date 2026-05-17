@@ -93,16 +93,59 @@ El lexer aplica la regla **longest-match** y, ante empates, prefiere la primera 
 
 ## Cómo se invoca el front-end desde el código
 
-En tiempo de ejecución, el flujo del front-end es:
+En tiempo de ejecución, el flujo del compilador es:
 
 ```
 PatitoFrontEnd.Compile(source)
   ├── 1. PatitoLexer        ← Scanner (genera tokens)
   ├── 2. PatitoParser       ← Parser (genera parse tree)
-  └── 3. SemanticAnalyzer   ← Listener semántico (Entrega 2)
+  └── 3. SemanticAnalyzer   ← Listener semántico + generación de cuádruplos (Entrega 2 y 3)
 ```
 
-El archivo [`../src/Patito.Compiler/PatitoFrontEnd.cs`](../src/Patito.Compiler/PatitoFrontEnd.cs) encadena las tres fases y devuelve un `CompileResult` con los tokens, el árbol, la lista de errores léxicos, sintácticos y semánticos, y una referencia al `SemanticAnalyzer` ya poblado (ver [`estructuras.md`](estructuras.md) y [`puntos_neuralgicos.md`](puntos_neuralgicos.md)).
+El archivo [`../src/Patito.Compiler/PatitoFrontEnd.cs`](../src/Patito.Compiler/PatitoFrontEnd.cs) encadena las tres fases y devuelve un `CompileResult` con los tokens, el árbol, la lista de errores léxicos, sintácticos y semánticos, una referencia al `SemanticAnalyzer` ya poblado y la fila de cuádruplos (ver [`estructuras.md`](estructuras.md) y [`puntos_neuralgicos.md`](puntos_neuralgicos.md)).
+
+### Campos relevantes de `CompileResult` (Entrega 3)
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `Semantic` | `SemanticAnalyzer?` | Analizador con tablas y cubo populados. `null` si el parser falló. |
+| `Quads` | `IReadOnlyList<Quadruple>?` | Fila de cuádruplos generados. Acceso directo a `Semantic.Quads`. |
+| `Success` | `bool` | `true` si no hay errores léxicos, sintácticos ni semánticos. |
+
+### Flags del CLI (Entrega 3)
+
+El driver de línea de comandos (`Program.cs`) acepta los siguientes flags:
+
+| Flag | Descripción |
+|------|-------------|
+| `--tokens`  | Imprime la lista de tokens con número, línea, columna y texto. |
+| `--tree`    | Imprime el parse tree en formato Lisp-like y las tablas de símbolos. |
+| `--symbols` | Imprime la tabla global y el directorio de funciones. |
+| `--quads`   | Imprime la fila de cuádruplos generados en formato tabular: `# Op Left Right Result`. |
+| `--demo`    | Ejecuta un programa Patito embebido y muestra tokens + cuádruplos. |
+
+Ejemplo de salida de `--quads`:
+
+```
+=== Fila de Cuádruplos ===
+   #  Op        Left          Right         Result
+------------------------------------------------------------
+   0  =         10            _             x
+   1  +         x             5             t0
+   2  =         t0            _             y
+   3  =         3.14          _             z
+   4  >         x             y             t1
+   5  GotoF     t1            _             8
+   6  Print     _             _             "x es mayor"
+   7  Goto      _             _             10
+   8  Print     _             _             "y es mayor o igual"
+   9  Print     _             _             y
+  10  <         x             100           t2
+  11  GotoF     t2            _             14
+  12  +         x             1             t3
+  13  =         t3            _             x
+  14  Goto      _             _             10
+```
 
 ## Conclusión
 

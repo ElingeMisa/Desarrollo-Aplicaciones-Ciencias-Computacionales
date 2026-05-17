@@ -134,6 +134,132 @@ Es un `record` inmutable. El campo `Address` es el "hueco" reservado para la Ent
 
 Resultado: al terminar el recorrido, el `FunctionDirectory` y la `GlobalTable` están **pobladas**, el cubo semántico está disponible para consultas, y la lista de errores semánticos contiene todas las violaciones detectadas.
 
+---
+
+## Estructuras de la Entrega 3 — Generación de cuádruplos
+
+La generación de código intermedio requiere cuatro estructuras nuevas que se alojan en el paquete `Patito.Compiler.CodeGen`. Todas ellas son instanciadas y orquestadas por `QuadrupleEmitter`, que el `SemanticAnalyzer` posee como campo privado y expone como propiedad `Emitter`.
+
+### Mapa de clases (Entrega 3)
+
+```
+                         ┌─────────────────────────────────┐
+                         │  QuadrupleEmitter                │
+                         │                                  │
+                         │  + Operadores : PilaOperadores   │
+                         │  + Operandos  : PilaOperandos    │
+                         │  + Tipos      : PilaTipos        │
+                         │  + Fila       : FilaCuadruplos   │
+                         │  + NewTemp()  : string           │
+                         │  + PushOperand(name, type)       │
+                         │  + EmitBinary(op, l, lt, r, rt)  │
+                         └──────────────┬──────────────────┘
+              ┌───────────┬─────────────┼─────────────────────┐
+              ▼           ▼             ▼                      ▼
+   ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐
+   │PilaOperadores│ │PilaOperandos │ │  PilaTipos   │ │  FilaCuadruplos  │
+   │Stack<QuadOp> │ │Stack<string> │ │Stack<Sem.T.> │ │ List<Quadruple>  │
+   │              │ │              │ │              │ │                  │
+   │+ Push(op)    │ │+ Push(name)  │ │+ Push(type)  │ │+ Emit(…) → int   │
+   │+ Pop()       │ │+ Pop()       │ │+ Pop()       │ │+ Backfill(i,val) │
+   │+ Peek()      │ │+ Peek()      │ │+ Peek()      │ │+ Count           │
+   │+ IsEmpty     │ │+ IsEmpty     │ │+ IsEmpty     │ │+ Quads (lista)   │
+   └──────────────┘ └──────────────┘ └──────────────┘ └──────────────────┘
+                                                              │  contiene n
+                                                              ▼
+                                               ┌─────────────────────────┐
+                                               │  Quadruple (record)     │
+                                               │  + Index  : int         │
+                                               │  + Op     : QuadOp      │
+                                               │  + Left   : string?     │
+                                               │  + Right  : string?     │
+                                               │  + Result : string      │
+                                               └─────────────────────────┘
+```
+
+### PilaOperadores
+
+Apila los operadores (`QuadOp`) pendientes de aplicar durante la evaluación de una expresión. `QuadrupleEmitter.EmitBinary` hace `Push(op)` seguido de `Pop()` para procesar el operador de forma explícita a través de la pila antes de emitir el cuádruplo.
+
+**Estructura subyacente:** `Stack<QuadOp>` (BCL de .NET).
+
+| Operación | Complejidad | Propósito |
+|-----------|-------------|-----------|
+| `Push(op)` | O(1) | Registra el operador que se va a aplicar. |
+| `Pop()`    | O(1) | Extrae el operador para emitir el cuádruplo. |
+| `Peek()`   | O(1) | Consulta sin extraer (para algoritmos de precedencia). |
+| `IsEmpty`  | O(1) | Guard para evitar pop sobre pila vacía. |
+
+### PilaOperandos
+
+Apila los **nombres** de los operandos (variables, constantes literales o temporales `t0`, `t1`, …) generados durante la evaluación de los factores. Se mantiene en paralelo con `PilaTipos`.
+
+**Estructura subyacente:** `Stack<string>` (BCL de .NET).
+
+| Operación | Complejidad | Propósito |
+|-----------|-------------|-----------|
+| `Push(name)` | O(1) | Registra el nombre del operando tras evaluar un factor. |
+| `Pop()`      | O(1) | Extrae el operando para construir el cuádruplo. |
+
+### PilaTipos
+
+Apila los `SemanticType` correspondientes a cada entrada de `PilaOperandos`. El elemento en la posición *N* de `PilaTipos` tiene su nombre en la posición *N* de `PilaOperandos`. `QuadrupleEmitter.EmitBinary` extrae ambos en paralelo y consulta el cubo semántico antes de emitir.
+
+**Estructura subyacente:** `Stack<SemanticType>` (BCL de .NET).
+
+### FilaCuadruplos
+
+Acumula los cuádruplos en el orden en que se ejecutarán. Conceptualmente es una **fila** (cola), pero se implementa sobre `List<Quadruple>` para permitir la operación `Backfill`, que rellena el destino de un salto condicional o incondicional una vez que se conoce la posición correcta.
+
+**Estructura subyacente:** `List<Quadruple>` (BCL de .NET).
+
+| Operación | Complejidad | Propósito |
+|-----------|-------------|-----------|
+| `Emit(op, left, right, result) → int` | O(1) amortizado | Agrega un cuádruplo al final; devuelve su índice. |
+| `Backfill(index, newResult)` | O(1) | Rellena el campo `Result` del cuádruplo en `index`. |
+| `Count` | O(1) | Número de cuádruplos emitidos. |
+| `Quads` | O(n) iteración | Acceso de solo lectura para imprimir la fila. |
+
+### Quadruple
+
+Registro inmutable `(Index, Op, Left?, Right?, Result)` que representa una instrucción de código intermedio de Patito.
+
+```
+Formato:  (Op, Left, Right, Result)
+
+Aritmético/relacional:  Result = Left op Right
+Asignación:             Result = Left        (Right = null)
+Negación unaria:        Result = -Right      (Left = null)
+GotoF:                  if !Left goto Result (Right = null)
+Goto:                   goto Result          (Left = Right = null)
+Print:                  imprimir Result      (Left = Right = null)
+Param:                  param Result         (Left = Right = null)
+Gosub:                  gosub Result         (Left = Right = null)
+```
+
+### QuadrupleEmitter
+
+Orquestador que posee las cuatro estructuras y centraliza las operaciones de generación de código:
+
+- `NewTemp()` — genera nombres únicos `t0`, `t1`, `t2`, … para resultados intermedios.
+- `PushOperand(name, type)` — apila un par (nombre, tipo) en `PilaOperandos` y `PilaTipos` simultáneamente.
+- `EmitBinary(op, leftName, leftType, rightName, rightType)` — usa `PilaOperadores` para procesar el operador, consulta el cubo semántico y emite el cuádruplo en `FilaCuadruplos`. Devuelve `(resultName, resultType)`.
+
+### Ciclo de vida (Entrega 3)
+
+El ciclo de la Entrega 2 se extiende con una fase de generación de código que ocurre **durante el mismo recorrido** del árbol:
+
+1. `ExitFactorSimple` → `_emitter.PushOperand(name, type)` por cada operando hoja.
+2. `ExitTermino` y `ExitExp` → `_emitter.EmitBinary(op, …)` por cada operación aritmética.
+3. `ExitExpresion` → `_emitter.EmitBinary(relOp, …)` si hay operador relacional.
+4. `ExitAsigna` → `_emitter.Fila.Emit(Assign, exprName, null, destName)`.
+5. `ExitImp` → `_emitter.Fila.Emit(Print, null, null, value)`.
+6. `ExitCondicion` / `ExitCiclo` → `_emitter.Fila.Backfill(index, target)` para resolver saltos.
+
+Resultado: al terminar el recorrido, `_emitter.Fila.Quads` contiene la fila completa de cuádruplos en orden de ejecución, accesible via `SemanticAnalyzer.Quads` y `CompileResult.Quads`.
+
+---
+
 ## Ver también
 
 - [`puntos_neuralgicos.md`](puntos_neuralgicos.md) — los `Enter…`/`Exit…` que llenan estas estructuras durante el recorrido del árbol.

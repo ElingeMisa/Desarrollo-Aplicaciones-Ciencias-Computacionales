@@ -11,10 +11,12 @@ namespace Patito.Compiler;
 /// Driver de linea de comandos para el compilador Patito.
 ///
 /// Uso:
-///     patitoc <archivo.patito>           Tokeniza y parsea el archivo y reporta resultado.
-///     patitoc <archivo.patito> --tree    Imprime ademas el arbol de derivacion.
-///     patitoc <archivo.patito> --tokens  Imprime el listado de tokens.
-///     patitoc --demo                     Corre el ejemplo embebido (util para CI).
+///     patitoc &lt;archivo.patito&gt;            Tokeniza, parsea y analiza semanticamente.
+///     patitoc &lt;archivo.patito&gt; --tree      Imprime ademas el arbol de derivacion.
+///     patitoc &lt;archivo.patito&gt; --tokens    Imprime el listado de tokens.
+///     patitoc &lt;archivo.patito&gt; --symbols   Imprime tablas de variables y directorio.
+///     patitoc &lt;archivo.patito&gt; --quads     Imprime la fila de cuadruplos generados.
+///     patitoc --demo                         Corre el ejemplo embebido (util para CI).
 /// </summary>
 public static class Program
 {
@@ -38,57 +40,47 @@ public static class Program
             return 2;
         }
 
-        bool printTokens = args.Contains("--tokens");
-        bool printTree   = args.Contains("--tree");
+        bool printTokens  = args.Contains("--tokens");
+        bool printTree    = args.Contains("--tree");
+        bool printSymbols = args.Contains("--symbols");
+        bool printQuads   = args.Contains("--quads");
 
         var source = File.ReadAllText(path);
         var result = PatitoFrontEnd.Compile(source, Path.GetFileName(path));
 
         if (printTokens)
-        {
             PrintTokens(result);
-        }
 
-        // Reporte de errores lexicos
         foreach (var err in result.LexErrors)
-        {
             Console.Error.WriteLine($"[LEX] {err}");
-        }
-        // Reporte de errores sintacticos
         foreach (var err in result.ParseErrors)
-        {
             Console.Error.WriteLine($"[PARSE] {err}");
-        }
-        // Reporte de errores semanticos (Entrega 2)
         foreach (var err in result.SemanticErrors)
-        {
             Console.Error.WriteLine($"[SEM] {err}");
-        }
 
         if (printTree && result.Tree is not null)
         {
-            // ToStringTree con el array de reglas produce un arbol legible (Lisp-like).
             var ruleNames = PatitoParser.ruleNames;
             Console.WriteLine();
             Console.WriteLine("=== Parse Tree ===");
             Console.WriteLine(Trees.ToStringTree(result.Tree, ruleNames));
         }
 
-        // Si el analizador semantico corrio, imprimimos un resumen del
-        // directorio de funciones y la tabla global. Esto sirve como
-        // "deliverable visual" para la Entrega 2.
-        if (result.Semantic is not null && (printTree || args.Contains("--symbols")))
-        {
+        if (result.Semantic is not null && (printTree || printSymbols))
             PrintSymbolTables(result.Semantic);
-        }
+
+        if (printQuads)
+            PrintQuadruples(result);
 
         if (result.Success)
         {
-            var nFuncs = result.Semantic?.Directory.Count ?? 0;
+            var nFuncs   = result.Semantic?.Directory.Count ?? 0;
             var nGlobals = result.Semantic?.GlobalTable.Count ?? 0;
+            var nQuads   = result.Quads?.Count ?? 0;
             Console.WriteLine(
                 $"[OK] {path}: {result.Tokens.Count} tokens, " +
-                $"{nGlobals} variable(s) global(es), {nFuncs} funcion(es) declarada(s).");
+                $"{nGlobals} variable(s) global(es), {nFuncs} funcion(es), " +
+                $"{nQuads} cuadruplo(s).");
             return 0;
         }
         else
@@ -99,6 +91,26 @@ public static class Program
                 $"{result.SemanticErrors.Count} error(es) semantico(s).");
             return 1;
         }
+    }
+
+    private static void PrintQuadruples(CompileResult result)
+    {
+        Console.WriteLine();
+        Console.WriteLine("=== Fila de Cuadruplos ===");
+        Console.WriteLine($"{"#",4}  {"Op",-8}  {"Left",-12}  {"Right",-12}  Result");
+        Console.WriteLine(new string('-', 60));
+
+        var quads = result.Quads;
+        if (quads is null || quads.Count == 0)
+        {
+            Console.WriteLine("  (sin cuadruplos)");
+        }
+        else
+        {
+            foreach (var q in quads)
+                Console.WriteLine(q.ToString());
+        }
+        Console.WriteLine();
     }
 
     private static void PrintSymbolTables(Patito.Compiler.Semantic.SemanticAnalyzer sem)
@@ -114,9 +126,7 @@ public static class Program
         else
         {
             foreach (var s in sem.GlobalTable.Symbols)
-            {
                 Console.WriteLine($"  {s}");
-            }
         }
         Console.WriteLine();
         Console.WriteLine("--- Directorio de Funciones ---");
@@ -130,9 +140,7 @@ public static class Program
             {
                 Console.WriteLine($"  {f}");
                 foreach (var s in f.LocalTable.Symbols)
-                {
                     Console.WriteLine($"    - {s}");
-                }
             }
         }
         Console.WriteLine();
@@ -157,20 +165,18 @@ public static class Program
 
     private static void PrintUsage()
     {
-        Console.WriteLine("Patito Compiler - Front End (Scanner + Parser + Analisis Semantico)");
+        Console.WriteLine("Patito Compiler - Front End + Generacion de Cuadruplos");
         Console.WriteLine();
         Console.WriteLine("Uso:");
         Console.WriteLine("  patitoc <archivo.patito>            Analisis lexico + sintactico + semantico.");
         Console.WriteLine("  patitoc <archivo.patito> --tokens   Imprime ademas la lista de tokens.");
         Console.WriteLine("  patitoc <archivo.patito> --tree     Imprime ademas el parse tree y las tablas.");
-        Console.WriteLine("  patitoc <archivo.patito> --symbols  Imprime la tabla global y el directorio de funciones.");
-        Console.WriteLine("  patitoc --demo                       Corre un programa embebido.");
+        Console.WriteLine("  patitoc <archivo.patito> --symbols  Imprime la tabla global y el directorio.");
+        Console.WriteLine("  patitoc <archivo.patito> --quads    Imprime la fila de cuadruplos generados.");
+        Console.WriteLine("  patitoc --demo                      Corre un programa embebido.");
         Console.WriteLine();
     }
 
-    /// <summary>
-    /// Ejecuta un programa Patito embebido (util para CI o smoke-test sin archivos).
-    /// </summary>
     private static int RunDemo()
     {
         const string demo = """
@@ -194,13 +200,15 @@ public static class Program
             """;
         var result = PatitoFrontEnd.Compile(demo, "demo.patito");
         PrintTokens(result);
+        PrintQuadruples(result);
         if (result.Success)
         {
-            Console.WriteLine("[OK] demo: parseado correctamente.");
+            Console.WriteLine("[OK] demo: compilado correctamente.");
             return 0;
         }
-        foreach (var e in result.LexErrors) Console.Error.WriteLine($"[LEX] {e}");
-        foreach (var e in result.ParseErrors) Console.Error.WriteLine($"[PARSE] {e}");
+        foreach (var e in result.LexErrors)    Console.Error.WriteLine($"[LEX] {e}");
+        foreach (var e in result.ParseErrors)  Console.Error.WriteLine($"[PARSE] {e}");
+        foreach (var e in result.SemanticErrors) Console.Error.WriteLine($"[SEM] {e}");
         return 1;
     }
 }
