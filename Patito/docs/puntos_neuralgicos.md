@@ -85,17 +85,68 @@ Cada validación emite un `SemanticError` con un `SemanticErrorCode` estable. Es
 | `UndeclaredVariable`      | Uso de una variable sin declararla antes.                |
 | `UndeclaredFunction`      | Llamada a una función no registrada en el directorio.    |
 
-## Qué NO se hace (todavía)
+---
 
-Los siguientes son puntos neurálgicos planeados para la Entrega 3 (generación de cuadruplos con cubo activado):
+## Puntos neurálgicos de la Entrega 3 — Generación de cuádruplos
 
-- `ExitFactor` / `ExitTermino` / `ExitExp`: apilar el tipo del operando y disparar el cubo para validar la operación binaria.
-- `EnterAsigna` / `ExitAsigna`: además de chequear que el destino exista, consultar el cubo en `Resolve(destinoType, Assign, expresionType)` y reportar incompatibilidad de tipos.
-- `EnterCondicion` / `EnterCiclo`: verificar que la expresión de control tiene tipo `Bool`.
-- `EnterImp`: validar que la expresión impresa tiene un tipo imprimible.
-- `EnterLlamada` con args: validar la aridad y el tipo de cada argumento contra `FunctionInfo.ParameterTypes`.
+Los siguientes puntos neurálgicos extienden la tabla de la Entrega 2. Todos operan sobre las estructuras de `QuadrupleEmitter` (`PilaOperadores`, `PilaOperandos`, `PilaTipos`, `FilaCuadruplos`) descritas en [`estructuras.md`](estructuras.md).
 
-Toda la infraestructura (cubo, pila de alcances, tablas pobladas) ya está en su lugar; lo que falta es apilar tipos durante el recorrido, que es la siguiente entrega.
+| #      | Punto neurálgico          | Disparador en la gramática                                   | Acción semántica                                                                                                   |
+|--------|---------------------------|--------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| PN-8   | `ExitFactorSimple`        | `factor : (±)? simple_atom  # FactorSimple`                  | Determina nombre y tipo del operando (ID, constante entera o flotante). Maneja signo unario negativo. Llama `PushOperand(name, type)` en PilaOperandos y PilaTipos. |
+| PN-9   | `ExitTermino`             | `termino : factor ((* \| /) factor)*`                        | Si hay más de un factor: saca todos los operandos de las pilas, itera los operadores `*`/`/` de `ctx.children`, llama `EmitBinary` por cada par (izquierda-derecha), empuja el temporal resultante. |
+| PN-10  | `ExitExp`                 | `exp : termino ((+ \| -) termino)*`                          | Idéntico a PN-9 pero para `+`/`-` (menor precedencia). Un solo termino → no hace nada. |
+| PN-11  | `ExitExpresion`           | `expresion : exp ( rel_op exp )?`                            | Si hay `rel_op`: saca los dos resultados de las pilas, llama `EmitBinary` con el operador relacional (`<`,`>`,`==`,`!=`), empuja el temporal Bool. Siempre llama `MaybeEmitGotoF`. |
+| PN-11b | `MaybeEmitGotoF` (helper) | Llamado al final de `ExitExpresion`                          | Si `ctx.Parent` es `CondicionContext` o `CicloContext`: saca el resultado de la condición de las pilas, emite `GotoF(cond, _, ?)` en FilaCuadruplos, apila el índice del cuádruplo en `_pendingGotoF` para Backfill posterior. |
+| PN-12  | `ExitAsigna`              | `asigna : ID = expresion ;`                                  | Saca el resultado de la expresión de las pilas. Consulta `SemanticCube.Resolve(destType, Assign, exprType)`: si es Error → reporta `TypeMismatch`; si es OK → emite `Assign(exprName, _, destID)` en FilaCuadruplos. |
+| PN-13  | `ExitImp`                 | `imp : expresion \| LETRERO`                                 | Si es LETRERO: emite `Print(_, _, "texto")`. Si es expresión: saca el resultado de las pilas y emite `Print(_, _, resultName)`. |
+| PN-14  | `EnterCiclo`              | `ciclo : mientras ( expresion ) haz cuerpo ;`                | Registra el índice actual de FilaCuadruplos en `_cicloStart` (pila). Ese índice es el destino del Goto de retorno al comienzo del ciclo. |
+| PN-15  | `ExitCuerpo`              | `cuerpo : { estatuto* }`  (cuando padre es CondicionContext) | Solo para el **primer** `cuerpo` de una condición que tiene `sino`: emite `Goto(_, _, ?)` (para saltar el bloque sino), apila su índice en `_pendingGoto`, y hace `Backfill` del GotoF pendiente apuntando al inicio del sino. |
+| PN-16  | `ExitCondicion`           | `condicion : si ( expresion ) cuerpo (sino cuerpo)? ;`       | **Con sino**: hace `Backfill(_pendingGoto.Pop(), current)` para que el Goto salte después del sino. **Sin sino**: hace `Backfill(_pendingGotoF.Pop(), current)` para que el GotoF salte después del si. |
+| PN-17  | `ExitCiclo`               | `ciclo : mientras ( expresion ) haz cuerpo ;`                | Emite `Goto(_, _, start)` donde `start = _cicloStart.Pop()`. Luego hace `Backfill(_pendingGotoF.Pop(), current)` para que el GotoF salte después del ciclo completo. |
+| PN-18  | `ExitCall_stmt`           | `call_stmt : llamada ;`                                      | Saca los argumentos de las pilas (en orden inverso al push → LIFO → restituye orden correcto), emite `Param(_, _, argName)` por cada argumento y `Gosub(_, _, funcName)`. |
+
+### Orden de ejecución (Entrega 3)
+
+Los nuevos puntos neurálgicos se encadenan en el recorrido del árbol de la siguiente manera para la expresión `a + b * c`:
+
+```
+EnterFactorSimple(a) → ExitFactorSimple(a)  → PilaOperandos=[a]  PilaTipos=[Entero]
+EnterFactorSimple(b) → ExitFactorSimple(b)  → PilaOperandos=[a,b]  PilaTipos=[Entero,Entero]
+EnterFactorSimple(c) → ExitFactorSimple(c)  → PilaOperandos=[a,b,c]  PilaTipos=[Entero,Entero,Entero]
+ExitTermino(b*c)     → EmitBinary(*, b, c)  → emit "t0 = b * c"  PilaOperandos=[a,t0]
+ExitExp(a + t0)      → EmitBinary(+, a, t0) → emit "t1 = a + t0" PilaOperandos=[t1]
+ExitExpresion(...)   → no rel_op, MaybeEmitGotoF → parent no es si/mientras → nada
+```
+
+### Ejemplo de control de flujo — `si/sino`
+
+Para `si (x > 0) { ... } sino { ... };`:
+
+```
+ExitExpresion(x > 0)  → emit "t0 = x > 0"
+MaybeEmitGotoF        → emit "GotoF t0 _ ?"   [índice=3, guardado en _pendingGotoF]
+  ... (quads del si-body) ...
+ExitCuerpo(si-body)   → emit "Goto _ _ ?"      [índice=7, guardado en _pendingGoto]
+                        Backfill(3, "8")        [GotoF apunta al inicio del sino]
+  ... (quads del sino-body) ...
+ExitCondicion         → Backfill(7, "10")       [Goto apunta después del sino]
+```
+
+### Ejemplo de control de flujo — `mientras`
+
+Para `mientras (i < n) haz { ... };`:
+
+```
+EnterCiclo            → _cicloStart.Push(0)    [inicio = cuad #0]
+ExitExpresion(i < n)  → emit "t0 = i < n"
+MaybeEmitGotoF        → emit "GotoF t0 _ ?"   [índice=1, guardado en _pendingGotoF]
+  ... (quads del cuerpo) ...
+ExitCiclo             → emit "Goto _ _ 0"      [regresa al inicio]
+                        Backfill(1, "5")        [GotoF apunta después del ciclo]
+```
+
+---
 
 ## Ver también
 
