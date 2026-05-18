@@ -1,0 +1,21 @@
+// =============================================================================
+//  11_retorno_tipo.patito
+//  Demuestra: funcion con tipo de retorno entero usada como factor
+//  dentro de una expresion aritmetica.
+// =============================================================================
+
+programa retorno;
+vars
+    x, resultado: entero;
+
+entero doble (n: entero) {
+    vars
+        d: entero;
+    d = n + n;
+};
+
+inicio {
+    x = 7;
+    resultado = doble(x) + 1;
+    escribe("resultado:", resultado);
+} fin

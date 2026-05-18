@@ -1,0 +1,14 @@
+// =============================================================================
+//  invalido_06_tipo_mismatch.patito  [INVALIDO - error semantico]
+//  Error: asignacion de flotante a entero (perdida de precision).
+//  Codigo esperado: SemanticErrorCode.TypeMismatch
+// =============================================================================
+
+programa tipoMal;
+vars
+    x: entero;
+    y: flotante;
+inicio {
+    y = 3.14;
+    x = y;
+} fin

@@ -1,0 +1,11 @@
+// =============================================================================
+//  invalido_07_var_no_declarada_en_funcion.patito  [INVALIDO - error semantico]
+//  Error: variable 'noExiste' usada dentro de funcion sin declaracion previa.
+//  Codigo esperado: SemanticErrorCode.UndeclaredVariable
+// =============================================================================
+
+programa varMal;
+nula f () {
+    noExiste = 99;
+};
+inicio { f(); } fin

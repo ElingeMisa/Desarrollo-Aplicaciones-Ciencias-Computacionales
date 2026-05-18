@@ -1,0 +1,22 @@
+// =============================================================================
+//  10_tipo_flotante.patito
+//  Demuestra: division (siempre flotante), constantes flotantes,
+//  widening entero->flotante en expresiones, comparacion mixta.
+// =============================================================================
+
+programa flotantes;
+vars
+    a, b: entero;
+    r, pi: flotante;
+
+inicio {
+    a = 10;
+    b = 3;
+    r = a / b;
+    pi = 3.14159;
+    escribe("division:", r);
+    escribe("pi:", pi);
+    si (r < pi) {
+        escribe("r es menor que pi");
+    };
+} fin

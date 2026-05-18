@@ -252,6 +252,10 @@ public class ParserTests
     [InlineData("05_funcion.patito")]
     [InlineData("06_expresiones.patito")]
     [InlineData("07_comentarios.patito")]
+    [InlineData("08_funciones_multiples.patito")]
+    [InlineData("09_anidamiento.patito")]
+    [InlineData("10_tipo_flotante.patito")]
+    [InlineData("11_retorno_tipo.patito")]
     public void Ejemplos_Validos_Pasan(string fileName)
     {
         var path = Path.Combine(AppContext.BaseDirectory, "examples", fileName);
@@ -267,6 +271,9 @@ public class ParserTests
     [InlineData("invalido_03_letrero_multilinea.patito")]
     [InlineData("invalido_04_caracter_invalido.patito")]
     [InlineData("invalido_05_tipo_invalido.patito")]
+    [InlineData("invalido_06_tipo_mismatch.patito")]
+    [InlineData("invalido_07_var_no_declarada_en_funcion.patito")]
+    [InlineData("invalido_08_funcion_redeclarada.patito")]
     public void Ejemplos_Invalidos_Fallan(string fileName)
     {
         var path = Path.Combine(AppContext.BaseDirectory, "examples", fileName);
@@ -274,6 +281,172 @@ public class ParserTests
         var src = File.ReadAllText(path);
         var r = Run(src);
         Assert.False(r.Success, $"Se esperaba error en {fileName} pero el parser/lexer lo aceptaron.");
+    }
+
+    // ---- 8. Edge cases de parser -----------------------------------------------
+
+    [Fact]
+    public void Expresion_NegacionUnaria_Variable_Pasa()
+    {
+        const string src = """
+            programa demo;
+            vars
+                x, y: entero;
+            inicio {
+                x = 5;
+                y = -x;
+            } fin
+            """;
+        Assert.True(Run(src).Success);
+    }
+
+    [Fact]
+    public void Condicion_Anidada_ConSino_Pasa()
+    {
+        const string src = """
+            programa demo;
+            vars
+                x, y: entero;
+            inicio {
+                x = 10;
+                y = 5;
+                si (x > y) {
+                    si (y > 0) {
+                        escribe("ambos positivos");
+                    } sino {
+                        escribe("y no positivo");
+                    };
+                } sino {
+                    escribe("x no mayor");
+                };
+            } fin
+            """;
+        Assert.True(Run(src).Success);
+    }
+
+    [Fact]
+    public void Ciclo_ConCondicionInterior_Pasa()
+    {
+        const string src = """
+            programa demo;
+            vars
+                i, limite: entero;
+            inicio {
+                limite = 10;
+                i = 0;
+                mientras (i < limite) haz {
+                    si (i == 5) {
+                        escribe("mitad");
+                    };
+                    i = i + 1;
+                };
+            } fin
+            """;
+        Assert.True(Run(src).Success);
+    }
+
+    [Fact]
+    public void Funcion_MultiplesDeclaraciones_Pasa()
+    {
+        const string src = """
+            programa demo;
+            vars
+                n: entero;
+
+            nula primero () {
+                escribe("primero");
+            };
+
+            nula segundo (x: entero) {
+                vars
+                    local: entero;
+                local = x + 1;
+                escribe(local);
+            };
+
+            nula tercero (a: entero, b: flotante) {
+                escribe(a);
+            };
+
+            inicio {
+                n = 3;
+                primero();
+                segundo(n);
+                tercero(n, 1.5);
+            } fin
+            """;
+        Assert.True(Run(src).Success);
+    }
+
+    [Fact]
+    public void Funcion_ConRetornoEntero_Pasa()
+    {
+        const string src = """
+            programa demo;
+            vars
+                r: entero;
+
+            entero duplicar (n: entero) {
+                vars
+                    d: entero;
+                d = n + n;
+            };
+
+            inicio {
+                r = duplicar(4) + 1;
+                escribe(r);
+            } fin
+            """;
+        Assert.True(Run(src).Success);
+    }
+
+    [Fact]
+    public void Expresion_ParentesisAnidados_Pasa()
+    {
+        const string src = """
+            programa demo;
+            vars
+                x: entero;
+            inicio {
+                x = ((2 + 3) * (4 - 1)) / 5;
+                escribe(x);
+            } fin
+            """;
+        Assert.True(Run(src).Success);
+    }
+
+    [Fact]
+    public void Expresion_CadenaDeOperaciones_Pasa()
+    {
+        const string src = """
+            programa demo;
+            vars
+                a, b, c, d, resultado: entero;
+            inicio {
+                a = 1;
+                b = 2;
+                c = 3;
+                d = 4;
+                resultado = a + b + c + d;
+                escribe(resultado);
+            } fin
+            """;
+        Assert.True(Run(src).Success);
+    }
+
+    [Fact]
+    public void Escribe_SoloUnElemento_Pasa()
+    {
+        const string src = """
+            programa demo;
+            vars
+                x: entero;
+            inicio {
+                x = 42;
+                escribe(x);
+            } fin
+            """;
+        Assert.True(Run(src).Success);
     }
 
     // ---------------------------------------------------------------------------

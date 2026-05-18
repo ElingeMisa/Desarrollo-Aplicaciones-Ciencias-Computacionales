@@ -1,0 +1,10 @@
+// =============================================================================
+//  invalido_08_funcion_redeclarada.patito  [INVALIDO - error semantico]
+//  Error: funcion 'f' declarada dos veces en el mismo programa.
+//  Codigo esperado: SemanticErrorCode.FunctionRedeclared
+// =============================================================================
+
+programa funcMal;
+nula f () { };
+nula f () { };
+inicio { f(); } fin
