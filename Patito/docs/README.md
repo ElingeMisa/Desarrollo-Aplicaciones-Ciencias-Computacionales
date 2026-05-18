@@ -25,11 +25,12 @@ Esta carpeta contiene toda la documentación técnica del proyecto. Cada archivo
 
 ### Análisis semántico (Entrega 2)
 
-| Documento                                                 | Contenido                                                                                  |
-|-----------------------------------------------------------|--------------------------------------------------------------------------------------------|
-| [`cubo_semantico.md`](cubo_semantico.md)                  | Tabla de consideraciones semánticas: combinación tipo × operador × tipo → resultado.       |
-| [`estructuras.md`](estructuras.md)                        | Diseño de `VariableTable`, `Symbol`, `FunctionInfo` y `FunctionDirectory` con justificación de las estructuras de datos elegidas. |
-| [`puntos_neuralgicos.md`](puntos_neuralgicos.md)          | Recorrido del árbol con ANTLR4: mapeo de cada `Enter…`/`Exit…` del listener a su acción semántica y a las validaciones que ejecuta. |
+| Documento                                                         | Contenido                                                                                                                                        |
+|-------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`cubo_semantico.md`](cubo_semantico.md)                          | Tabla de consideraciones semánticas: combinación tipo × operador × tipo → resultado.                                                             |
+| [`estructuras.md`](estructuras.md)                                | Diseño de `VariableTable`, `Symbol`, `FunctionInfo` y `FunctionDirectory` con justificación de las estructuras de datos elegidas y ciclo de vida completo. |
+| [`directorio_y_tablas.md`](directorio_y_tablas.md)                | Descripción de las estructuras que representan el Directorio de Funciones y las Tablas de Variables: campos, operaciones y ejemplo concreto de poblado a partir de código fuente. |
+| [`puntos_neuralgicos.md`](puntos_neuralgicos.md)                  | Recorrido del árbol con ANTLR4: mapeo de cada `Enter…`/`Exit…` del listener a su acción semántica y a las validaciones que ejecuta.              |
 
 ### Calidad y verificación
 
@@ -45,7 +46,7 @@ Si lo que buscas es el material que corresponde a una **entrega específica**, e
 |------------------------------------|------------------------------------------------------------------------------------------------------------------|
 | **Entrega 0** — Definición del lenguaje | [`lenguaje.md`](lenguaje.md), [`lexico.md`](lexico.md), [`gramatica.md`](gramatica.md) (sección "BNF original").    |
 | **Entrega 1** — Léxico y sintaxis  | [`herramientas.md`](herramientas.md), [`lexico.md`](lexico.md), [`gramatica.md`](gramatica.md) (secciones de ANTLR4), [`pruebas.md`](pruebas.md). |
-| **Entrega 2** — Análisis semántico | [`cubo_semantico.md`](cubo_semantico.md), [`estructuras.md`](estructuras.md), [`puntos_neuralgicos.md`](puntos_neuralgicos.md), [`pruebas.md`](pruebas.md). |
+| **Entrega 2** — Análisis semántico | [`cubo_semantico.md`](cubo_semantico.md), [`estructuras.md`](estructuras.md), [`directorio_y_tablas.md`](directorio_y_tablas.md), [`puntos_neuralgicos.md`](puntos_neuralgicos.md), [`pruebas.md`](pruebas.md). |
 
 ## Convenciones
 
