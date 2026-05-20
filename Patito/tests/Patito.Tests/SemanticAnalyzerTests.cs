@@ -306,6 +306,232 @@ public class SemanticAnalyzerTests
             r.Semantic.Cube.Resolve(SemanticType.Entero, SemanticOp.Plus, SemanticType.Entero));
     }
 
+    // -------------------------------------------------------------------------
+    //  TypeMismatch (Entrega 3)
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void AsignaFlotanteAEntero_EmiteTypeMismatch()
+    {
+        const string src = """
+            programa demo;
+            vars
+                x: entero;
+                y: flotante;
+            inicio {
+                y = 3.14;
+                x = y;
+            } fin
+            """;
+        var r = Run(src);
+        Assert.False(r.Success);
+        Assert.Contains(r.SemanticErrors, e => e.Code == SemanticErrorCode.TypeMismatch && e.Name == "x");
+    }
+
+    [Fact]
+    public void AsignaEnteroAFlotante_EsValido()
+    {
+        // flotante <- entero es widening permitido por el cubo.
+        const string src = """
+            programa demo;
+            vars
+                x: entero;
+                y: flotante;
+            inicio {
+                x = 5;
+                y = x;
+            } fin
+            """;
+        var r = Run(src);
+        Assert.True(r.Success, FormatErrors(r));
+    }
+
+    [Fact]
+    public void AsignaFlotanteDirectoAEntero_EmiteTypeMismatch()
+    {
+        // El literal 1.5 tiene tipo flotante; no puede ir a entero.
+        const string src = """
+            programa demo;
+            vars
+                x: entero;
+            inicio {
+                x = 1.5;
+            } fin
+            """;
+        var r = Run(src);
+        Assert.False(r.Success);
+        Assert.Contains(r.SemanticErrors, e => e.Code == SemanticErrorCode.TypeMismatch && e.Name == "x");
+    }
+
+    // -------------------------------------------------------------------------
+    //  Multiples errores en una compilacion
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void VariosErrores_TodosSeRecopilan()
+    {
+        // Dos funciones inexistentes en el mismo programa: se deben reportar ambas.
+        const string src = """
+            programa demo;
+            inicio {
+                noExiste1();
+                noExiste2();
+            } fin
+            """;
+        var r = Run(src);
+        Assert.False(r.Success);
+        Assert.Equal(2, r.SemanticErrors.Count(e => e.Code == SemanticErrorCode.UndeclaredFunction));
+    }
+
+    [Fact]
+    public void VariasVarsNoDeclaradas_TodosSeRecopilan()
+    {
+        const string src = """
+            programa demo;
+            vars
+                a: entero;
+            inicio {
+                a = fantasma1 + fantasma2;
+            } fin
+            """;
+        var r = Run(src);
+        Assert.False(r.Success);
+        Assert.True(r.SemanticErrors.Count >= 2,
+            $"Se esperaban >= 2 errores, se obtuvieron {r.SemanticErrors.Count}");
+    }
+
+    // -------------------------------------------------------------------------
+    //  Funciones con tipo de retorno no-nula
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void FuncionConRetornoEntero_SeRegistraEnDirectorio()
+    {
+        const string src = """
+            programa demo;
+            vars
+                r: entero;
+
+            entero duplicar (n: entero) {
+                vars
+                    d: entero;
+                d = n + n;
+            };
+
+            inicio {
+                r = duplicar(4) + 1;
+                escribe(r);
+            } fin
+            """;
+        var r = Run(src);
+        Assert.True(r.Success, FormatErrors(r));
+        var f = r.Semantic!.Directory.Lookup("duplicar")!;
+        Assert.Equal(SemanticType.Entero, f.ReturnType);
+        Assert.Single(f.ParameterTypes);
+        Assert.Equal(SemanticType.Entero, f.ParameterTypes[0]);
+    }
+
+    [Fact]
+    public void FuncionConRetornoFlotante_SeRegistraEnDirectorio()
+    {
+        const string src = """
+            programa demo;
+            vars
+                r: flotante;
+
+            flotante promedio (a: entero, b: entero) {
+                vars
+                    s: entero;
+                s = a + b;
+            };
+
+            inicio {
+                r = promedio(3, 7);
+            } fin
+            """;
+        var r = Run(src);
+        Assert.True(r.Success, FormatErrors(r));
+        var f = r.Semantic!.Directory.Lookup("promedio")!;
+        Assert.Equal(SemanticType.Flotante, f.ReturnType);
+        Assert.Equal(2, f.ParameterTypes.Count);
+    }
+
+    // -------------------------------------------------------------------------
+    //  Variables globales usadas con widening
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void VarGlobal_WideningEnExpresion_EsValido()
+    {
+        // entero + flotante = flotante; asignar a flotante es valido.
+        const string src = """
+            programa demo;
+            vars
+                a: entero;
+                b, resultado: flotante;
+            inicio {
+                a = 3;
+                b = 1.5;
+                resultado = a + b;
+            } fin
+            """;
+        var r = Run(src);
+        Assert.True(r.Success, FormatErrors(r));
+    }
+
+    // -------------------------------------------------------------------------
+    //  Casos de error en ejemplos invalidos
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void EjemploInvalido06_TypeMismatch_EmiteError()
+    {
+        const string src = """
+            programa tipoMal;
+            vars
+                x: entero;
+                y: flotante;
+            inicio {
+                y = 3.14;
+                x = y;
+            } fin
+            """;
+        var r = Run(src);
+        Assert.False(r.Success);
+        Assert.Contains(r.SemanticErrors, e => e.Code == SemanticErrorCode.TypeMismatch);
+    }
+
+    [Fact]
+    public void EjemploInvalido07_VarNoDeclaradaEnFuncion_EmiteError()
+    {
+        const string src = """
+            programa varMal;
+            nula f () {
+                noExiste = 99;
+            };
+            inicio { f(); } fin
+            """;
+        var r = Run(src);
+        Assert.False(r.Success);
+        Assert.Contains(r.SemanticErrors, e =>
+            e.Code == SemanticErrorCode.UndeclaredVariable && e.Name == "noExiste");
+    }
+
+    [Fact]
+    public void EjemploInvalido08_FuncionRedeclarada_EmiteError()
+    {
+        const string src = """
+            programa funcMal;
+            nula f () { };
+            nula f () { };
+            inicio { f(); } fin
+            """;
+        var r = Run(src);
+        Assert.False(r.Success);
+        Assert.Contains(r.SemanticErrors, e =>
+            e.Code == SemanticErrorCode.FunctionRedeclared && e.Name == "f");
+    }
+
     private static string FormatErrors(CompileResult r)
     {
         var lex = string.Join("\n  ", r.LexErrors);

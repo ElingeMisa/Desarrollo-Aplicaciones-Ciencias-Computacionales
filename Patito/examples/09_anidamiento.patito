@@ -1,0 +1,32 @@
+// =============================================================================
+//  09_anidamiento.patito
+//  Demuestra: si/sino anidados + while con si interior.
+//  Ejercita el backfill de multiples saltos pendientes simultaneamente.
+// =============================================================================
+
+programa anidado;
+vars
+    x, y, i: entero;
+
+inicio {
+    x = 10;
+    y = 5;
+
+    si (x > y) {
+        si (y > 0) {
+            escribe("x mayor, y positivo");
+        } sino {
+            escribe("x mayor, y no positivo");
+        };
+    } sino {
+        escribe("x no mayor que y");
+    };
+
+    i = 0;
+    mientras (i < x) haz {
+        si (i == y) {
+            escribe("i igual a y");
+        };
+        i = i + 1;
+    };
+} fin

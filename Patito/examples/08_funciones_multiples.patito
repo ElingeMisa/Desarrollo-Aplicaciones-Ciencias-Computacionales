@@ -1,0 +1,32 @@
+// =============================================================================
+//  08_funciones_multiples.patito
+//  Demuestra: varias funciones declaradas, parametros, while interior,
+//  llamadas multiples desde main.
+// =============================================================================
+
+programa multiFunc;
+vars
+    resultado: entero;
+
+nula imprimirDoble (n: entero) {
+    vars
+        doble: entero;
+    doble = n + n;
+    escribe("doble:", doble);
+};
+
+nula contar (limite: entero) {
+    vars
+        i: entero;
+    i = 0;
+    mientras (i < limite) haz {
+        escribe(i);
+        i = i + 1;
+    };
+};
+
+inicio {
+    resultado = 5;
+    imprimirDoble(resultado);
+    contar(3);
+} fin
