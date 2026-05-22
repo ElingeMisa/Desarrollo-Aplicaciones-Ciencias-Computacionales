@@ -4,7 +4,7 @@ Este documento consolida el **plan de pruebas** del compilador Patito a lo largo
 
 El diseño del plan persigue cuatro objetivos:
 
-- **Pruebas dirigidas:** cada regla léxica, sintáctica o semántica clave tiene al menos un test que la ejercita.
+- **Pruebas dirigidas:** cada regla léxica, sintáctica, semántica o de generación de código clave tiene al menos un test que la ejercita.
 - **Pruebas de proximidad:** pares como (`==` vs `=`) o (`KW_SI` vs `ID siempre`) verifican la prioridad del *longest-match* y las palabras reservadas.
 - **Pruebas inversas:** programas diseñados deliberadamente para fallar en cada fase (léxica, sintáctica, semántica).
 - **Pruebas en archivos:** suite parametrizada que carga cada `.patito` de [`../examples/`](../examples) y verifica el resultado esperado.
@@ -19,6 +19,7 @@ El diseño del plan persigue cuatro objetivos:
 | [`VariableTableTests.cs`](../tests/Patito.Tests/VariableTableTests.cs) | Operaciones de la tabla de variables (declarar, duplicado, lookup).                      |
 | [`FunctionDirectoryTests.cs`](../tests/Patito.Tests/FunctionDirectoryTests.cs) | Operaciones del directorio de funciones.                                                  |
 | [`SemanticAnalyzerTests.cs`](../tests/Patito.Tests/SemanticAnalyzerTests.cs) | End-to-end: programa Patito → tablas pobladas + errores semánticos detectados.            |
+| [`CodeGenTests.cs`](../tests/Patito.Tests/CodeGenTests.cs) | Generación de cuádruplos: PN-8 a PN-18, precedencia, Backfill, llamadas a función e integración. |
 
 ## Pruebas para el SCANNER
 
@@ -115,14 +116,147 @@ Estas pruebas alimentan código Patito al front-end completo y verifican que el 
 | Función usa global sin error                      | `FuncionUsaGlobalSinError`                         | La función accede al global declarado en el programa sin error.                              |
 | Cubo accesible desde el analizador                 | `AnalizadorExponeCubo`                             | `Semantic.Cube` no es null y responde correctamente a `Resolve`.                            |
 
+## Pruebas de GENERACIÓN DE CÓDIGO (Entrega 3)
+
+Archivo: [`CodeGenTests.cs`](../tests/Patito.Tests/CodeGenTests.cs)
+
+Todas las pruebas de esta sección compilan el programa fuente con `PatitoFrontEnd.Compile` y validan la fila de cuádruplos resultante. Si la compilación falla por errores léxicos, sintácticos o semánticos, la prueba falla también antes de llegar a verificar los cuádruplos.
+
+El helper central es:
+
+```csharp
+private static IReadOnlyList<Quadruple> Quads(string src)
+{
+    var r = PatitoFrontEnd.Compile(src, "<codegen-test>");
+    Assert.True(r.Success, /* mensaje con errores */);
+    return r.Quads!;
+}
+```
+
+### Asignación (PN-8, PN-12)
+
+| Caso                              | Entrada                 | Cuádruplos esperados                                    |
+|-----------------------------------|-------------------------|---------------------------------------------------------|
+| `AsignaConstanteEntera`           | `x = 42;`               | `(=, "42", null, "x")`                                  |
+| `AsignaConstanteFlotante`         | `pi = 3.14;`            | `(=, "3.14", null, "pi")`                               |
+| `AsignaVariable`                  | `a = 1; b = a;`         | `(=,"1",null,"a")`, `(=,"a",null,"b")`                  |
+
+### Suma y resta (PN-10)
+
+| Caso                              | Entrada                 | Cuádruplos esperados                                    |
+|-----------------------------------|-------------------------|---------------------------------------------------------|
+| `Suma_DosVariables`               | `x = a + b;`            | `(+,"a","b","t0")`, `(=,"t0",null,"x")`                 |
+| `Resta_DosVariables`              | `x = a - b;`            | `(-,"a","b","t0")`, `(=,"t0",null,"x")`                 |
+
+### Multiplicación y división (PN-9)
+
+| Caso                              | Entrada                 | Cuádruplos esperados                                    |
+|-----------------------------------|-------------------------|---------------------------------------------------------|
+| `Multiplicacion`                  | `x = a * b;`            | `(*,"a","b","t0")`, `(=,"t0",null,"x")`                 |
+| `Division`                        | `r = a / b;`            | `(/,"a","b","t0")`, `(=,"t0",null,"r")` — resultado `Flotante` |
+
+### Precedencia (PN-9 + PN-10)
+
+| Caso                                    | Entrada               | Cuádruplos esperados                                                        |
+|-----------------------------------------|-----------------------|-----------------------------------------------------------------------------|
+| `Precedencia_MulAntesQueSuma`           | `x = a + b * c;`      | `(*,"b","c","t0")`, `(+,"a","t0","t1")`, `(=,"t1",null,"x")`               |
+| `Precedencia_ParentesisAnulanMul`       | `x = (a + b) * c;`    | `(+,"a","b","t0")`, `(*,"t0","c","t1")`, `(=,"t1",null,"x")`               |
+
+### Negación unaria (PN-8)
+
+| Caso                              | Entrada                 | Cuádruplos esperados                                    |
+|-----------------------------------|-------------------------|---------------------------------------------------------|
+| `NegacionUnaria_Variable`         | `y = -x;`               | `(neg,null,"x","t0")`, `(=,"t0",null,"y")`              |
+
+### Operadores relacionales (PN-11)
+
+Prueba parametrizada `[Theory]` sobre los cuatro operadores:
+
+| `op` | `QuadOp` esperado | Cuádruplos verificados                                   |
+|------|-------------------|----------------------------------------------------------|
+| `<`  | `Lt`              | `(<,"a","b","t0")` en quad[0], `GotoF` en quad[1]        |
+| `>`  | `Gt`              | `(>,"a","b","t0")` en quad[0], `GotoF` en quad[1]        |
+| `==` | `Eq`              | `(==,"a","b","t0")` en quad[0], `GotoF` en quad[1]       |
+| `!=` | `Neq`             | `(!=,"a","b","t0")` en quad[0], `GotoF` en quad[1]       |
+
+### Impresión — `escribe` (PN-13)
+
+| Caso                              | Entrada                        | Cuádruplos esperados                                              |
+|-----------------------------------|--------------------------------|-------------------------------------------------------------------|
+| `Escribe_Letrero`                 | `escribe("hola mundo");`       | `(Print,null,null,"\"hola mundo\"")`                             |
+| `Escribe_Variable`                | `x = 7; escribe(x);`           | `(=,"7",null,"x")`, `(Print,null,null,"x")`                      |
+| `Escribe_MixtoLetreroyVariable`   | `escribe("resp:", n);`         | `(Print,null,null,"\"resp:\"")`, `(Print,null,null,"n")`         |
+
+### Condicional `si` sin `sino` (PN-11, PN-16)
+
+```
+si (x < 5) { y = 1; };
+```
+
+| # | Op    | Left | Right | Result |
+|---|-------|------|-------|--------|
+| 0 | `<`   | `x`  | `5`   | `t0`   |
+| 1 | GotoF | `t0` | `_`   | `3`    | ← Backfill en PN-16 |
+| 2 | `=`   | `1`  | `_`   | `y`    |
+
+### Condicional `si/sino` (PN-11, PN-15, PN-16)
+
+```
+si (x < 5) { y = 1; } sino { y = 2; };
+```
+
+| # | Op    | Left | Right | Result |
+|---|-------|------|-------|--------|
+| 0 | `<`   | `x`  | `5`   | `t0`   |
+| 1 | GotoF | `t0` | `_`   | `4`    | ← Backfill en PN-15 |
+| 2 | `=`   | `1`  | `_`   | `y`    |
+| 3 | Goto  | `_`  | `_`   | `5`    | ← Backfill en PN-16 |
+| 4 | `=`   | `2`  | `_`   | `y`    |
+
+### Ciclo `mientras` (PN-14, PN-17)
+
+```
+i = 0;
+mientras (i < 5) haz { i = i + 1; };
+```
+
+| # | Op    | Left | Right | Result |
+|---|-------|------|-------|--------|
+| 0 | `=`   | `0`  | `_`   | `i`    |
+| 1 | `<`   | `i`  | `5`   | `t0`   |
+| 2 | GotoF | `t0` | `_`   | `6`    | ← Backfill en PN-17 |
+| 3 | `+`   | `i`  | `1`   | `t1`   |
+| 4 | `=`   | `t1` | `_`   | `i`    |
+| 5 | Goto  | `_`  | `_`   | `1`    | ← ExitCiclo (PN-17) |
+
+### Llamadas a función (PN-18)
+
+| Caso                      | Entrada        | Cuádruplos (últimos de la función)                                    |
+|---------------------------|----------------|-----------------------------------------------------------------------|
+| `LlamadaSinArgs`          | `f();`         | `(Gosub,null,null,"f")`                                               |
+| `LlamadaConUnArg`         | `f(n);`        | `(Param,null,null,"n")`, `(Gosub,null,null,"f")`                      |
+| `LlamadaConDosArgs`       | `f(a, 7);`     | `(Param,null,null,"a")`, `(Param,null,null,"7")`, `(Gosub,...,"f")`   |
+
+### Pruebas de integración
+
+| Caso                                | Descripción                                                                                      |
+|-------------------------------------|--------------------------------------------------------------------------------------------------|
+| `Integracion_AsignacionYEscribe`    | 5 cuádruplos en orden exacto: dos asignaciones, un `+`, un `=` y un `Print`.                    |
+| `Integracion_CicloConPrint`         | 7 cuádruplos; `Print` queda dentro del cuerpo del ciclo (entre `GotoF` y `Goto`-al-inicio).     |
+| `Integracion_CondicionAnidada`      | `si/sino` anidados; ningún `GotoF` ni `Goto` queda con destino `"?"` tras el recorrido.         |
+| `Integracion_EjemploFuncion`        | Smoke test con función `saludar` + ciclo interno; todos los saltos resueltos.                    |
+
+---
+
 ## Cómo correr las pruebas
 
 ```bash
-# Toda la suite (Scanner + Parser + Semántica)
+# Toda la suite (Scanner + Parser + Semántica + CodeGen)
 dotnet test
 
 # Solo un archivo
 dotnet test --filter "FullyQualifiedName~SemanticAnalyzerTests"
+dotnet test --filter "FullyQualifiedName~CodeGenTests"
 
 # Solo una prueba
 dotnet test --filter "FullyQualifiedName~Funcion_Nula_ConParametros_Pasa"

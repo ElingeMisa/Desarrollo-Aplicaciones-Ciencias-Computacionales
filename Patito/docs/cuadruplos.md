@@ -1,0 +1,474 @@
+# Generación de Código Intermedio — Cuádruplos
+
+> Documentación de la **Entrega 3** del compilador. Ver el [índice general](README.md) para más contexto.
+
+Un **cuádruplo** es la unidad mínima de código intermedio: una instrucción de la forma `(Op, Left, Right, Result)` que puede ser ejecutada directamente por una máquina virtual o traducida a código objeto. Este documento explica el formato de los cuádruplos de Patito, los algoritmos que los generan y el resultado final para varios programas de prueba.
+
+Las **estructuras de datos** que soportan la generación (pilas y fila) están descritas en [`estructuras.md`](estructuras.md#estructuras-de-la-entrega-3--generación-de-cuádruplos).  
+Los **puntos neurálgicos** que disparan cada algoritmo están mapeados en [`puntos_neuralgicos.md`](puntos_neuralgicos.md#puntos-neurálgicos-de-la-entrega-3--generación-de-cuádruplos).
+
+---
+
+## Formato de un cuádruplo
+
+```
+(Op, Left, Right, Result)
+```
+
+| Campo    | Tipo        | Significado                                              |
+|----------|-------------|----------------------------------------------------------|
+| `Op`     | `QuadOp`    | La operación a realizar.                                 |
+| `Left`   | `string?`   | Primer operando o condición. `null` si no aplica.        |
+| `Right`  | `string?`   | Segundo operando. `null` si no aplica.                   |
+| `Result` | `string`    | Destino de la operación, nombre del temporal o índice de salto. |
+
+El campo `Index` (número de cuádruplo, base 0) lo asigna `FilaCuadruplos.Emit` automáticamente.
+
+### Catálogo de operaciones (`QuadOp`)
+
+| `QuadOp`        | Formato                               | Significado                                         |
+|-----------------|---------------------------------------|-----------------------------------------------------|
+| `Plus`          | `(+, L, R, T)`                        | `T = L + R`                                         |
+| `Minus`         | `(-, L, R, T)`                        | `T = L - R`                                         |
+| `Times`         | `(*, L, R, T)`                        | `T = L * R`                                         |
+| `Divide`        | `(/, L, R, T)`                        | `T = L / R`  → resultado siempre `Flotante`         |
+| `Lt`            | `(<, L, R, T)`                        | `T = L < R`  → resultado `Bool`                     |
+| `Gt`            | `(>, L, R, T)`                        | `T = L > R`  → resultado `Bool`                     |
+| `Eq`            | `(==, L, R, T)`                       | `T = L == R` → resultado `Bool`                     |
+| `Neq`           | `(!=, L, R, T)`                       | `T = L != R` → resultado `Bool`                     |
+| `Assign`        | `(=, expr, null, dest)`               | `dest = expr`                                       |
+| `Neg`           | `(neg, null, var, T)`                 | `T = -var`  — negación unaria de variable           |
+| `GotoF`         | `(GotoF, cond, null, N)`              | `if !cond goto quad[N]`                             |
+| `Goto`          | `(Goto, null, null, N)`               | `goto quad[N]`                                      |
+| `Print`         | `(Print, null, null, val)`            | `escribe(val)`                                      |
+| `Param`         | `(Param, null, null, arg)`            | Pasa el argumento `arg` a la función siguiente      |
+| `Gosub`         | `(Gosub, null, null, func)`           | Llama a la función `func`                           |
+| `EndFunc`       | `(EndFunc, null, null, func)`         | Marca el fin del cuerpo de `func` (reservado)       |
+
+---
+
+## Algoritmo de traducción
+
+La generación de cuádruplos ocurre **durante el mismo recorrido del árbol** que realiza el análisis semántico. Los algoritmos se implementan como métodos `Exit…` del listener `SemanticAnalyzer`, aprovechando que ANTLR4 los invoca cuando todos los hijos del nodo ya fueron visitados — es decir, cuando los operandos ya están disponibles en las pilas.
+
+El orquestador central es `QuadrupleEmitter`, que posee las tres pilas y la fila y expone los métodos `PushOperand`, `NewTemp` y `EmitBinary`.
+
+---
+
+### PN-8 · `ExitFactorSimple` — Operandos hoja
+
+Disparo: nodo `factor : (OP_MAS | OP_MENOS)? simple_atom  # FactorSimple`.
+
+Este es el **punto de entrada** de los operandos a las pilas. Determina nombre y tipo del operando y llama `PushOperand(nombre, tipo)`:
+
+```
+Si atom es ID
+    nombre ← id
+    tipo   ← tabla de símbolos [id].Type  (Error si no existe)
+Si atom es CTE_ENT
+    nombre ← texto del token  (p.ej. "42")
+    tipo   ← Entero
+Si atom es CTE_FLOT
+    nombre ← texto del token  (p.ej. "3.14")
+    tipo   ← Flotante
+
+Si tiene OP_MENOS (signo unario negativo):
+    Si atom es ID   → emitir (Neg, null, nombre, t_k);  nombre ← t_k
+    Si atom es cte  → nombre ← "-" + nombre  (p.ej. "-5")
+
+PushOperand(nombre, tipo)
+```
+
+> El signo unario positivo (`OP_MAS`) no genera ningún cuádruplo: el valor se apila sin modificar.
+
+---
+
+### PN-9 · `ExitTermino` — Multiplicación y División
+
+Disparo: nodo `termino : factor ((OP_POR | OP_DIV) factor)*`.
+
+Si el término tiene más de un factor, los `n` operandos ya están en las pilas (apilados por los `ExitFactorSimple` hijos). El algoritmo los saca y procesa los operadores `*` y `/` de **izquierda a derecha**:
+
+```
+n ← número de factores en el término
+Si n == 1: no hacer nada (el factor ya está en las pilas)
+
+Si n > 1:
+    Sacar los n pares (nombre, tipo) de las pilas en orden inverso → arrayNames, arrayTypes
+    left ← (arrayNames[0], arrayTypes[0])
+    Para cada OP_POR / OP_DIV entre factores consecutivos (índice opIdx):
+        right ← (arrayNames[opIdx+1], arrayTypes[opIdx+1])
+        (tempName, tempType) ← EmitBinary(Times|Divide, left.name, left.type, right.name, right.type)
+        left ← (tempName, tempType)
+    PushOperand(left.name, left.type)   // resultado final del término
+```
+
+`EmitBinary` consulta el cubo semántico, genera el nombre `t_k` con `NewTemp()` y emite el cuádruplo en `FilaCuadruplos`.
+
+---
+
+### PN-10 · `ExitExp` — Suma y Resta
+
+Disparo: nodo `exp : termino ((OP_MAS | OP_MENOS) termino)*`.
+
+Algoritmo idéntico a PN-9 pero para `+` y `-`. La clave es que **los `ExitTermino` se disparan antes** que `ExitExp` (porque `termino` es hijo de `exp`), por lo que la precedencia `*` / `/` > `+` / `-` está garantizada por la jerarquía de la gramática sin ninguna lógica adicional.
+
+---
+
+### PN-11 · `ExitExpresion` — Operadores relacionales
+
+Disparo: nodo `expresion : exp ( rel_op exp )?`.
+
+```
+Si hay rel_op:
+    right ← (Tipos.Pop(), Operandos.Pop())
+    left  ← (Tipos.Pop(), Operandos.Pop())
+    op    ← Lt | Gt | Eq | Neq  según el token rel_op
+    (tempName, tempType) ← EmitBinary(op, left.name, left.type, right.name, right.type)
+    PushOperand(tempName, tempType)   // tempType = Bool
+
+Llamar MaybeEmitGotoF(ctx)
+```
+
+#### PN-11b · `MaybeEmitGotoF` (helper)
+
+```
+Si ctx.Parent NO es CondicionContext ni CicloContext → retornar
+Si Tipos está vacía → retornar
+Tipos.Pop(); condName ← Operandos.Pop()
+gfIdx ← Fila.Emit(GotoF, condName, null, "?")   // destino desconocido
+_pendingGotoF.Push(gfIdx)
+```
+
+---
+
+### PN-12 · `ExitAsigna` — Asignación
+
+Disparo: nodo `asigna : ID OP_ASIGNA expresion SEMICOLON`.
+
+```
+destName ← ID.text
+destSym  ← LookupVariable(destName)
+exprType ← Tipos.Pop()
+exprName ← Operandos.Pop()
+
+Si destSym es null → retornar  (UndeclaredVariable ya reportado en PN-4)
+
+resultType ← SemanticCube.Resolve(destSym.Type, Assign, exprType)
+Si resultType == Error:
+    Reportar TypeMismatch
+    Retornar
+Emitir (Assign, exprName, null, destName)
+```
+
+---
+
+### PN-13 · `ExitImp` — Impresión
+
+Disparo: nodo `imp : expresion | LETRERO` (uno por cada argumento de `escribe`).
+
+```
+Si imp contiene LETRERO:
+    Emitir (Print, null, null, "\"texto\"")
+Si imp contiene expresion:
+    Tipos.Pop(); exprName ← Operandos.Pop()
+    Emitir (Print, null, null, exprName)
+```
+
+---
+
+### PN-14 · `EnterCiclo` — Registro del inicio del ciclo
+
+Disparo: nodo `ciclo : KW_MIENTRAS ...`, al **entrar** (antes de visitar hijos).
+
+```
+_cicloStart.Push(Fila.Count)
+```
+
+Guarda el índice del próximo cuádruplo que se emitirá (el primer cuádruplo de la condición del ciclo). Este valor será el destino del `Goto` de retorno.
+
+---
+
+### PN-15 · `ExitCuerpo` — Salto entre si-body y sino-body
+
+Disparo: nodo `cuerpo`, solo cuando el padre es una `condicion` **con** rama `sino`, y únicamente para el **primer** `cuerpo` (el bloque del `si`).
+
+```
+gotoIdx ← Fila.Emit(Goto, null, null, "?")   // salto al final del sino, destino pendiente
+_pendingGoto.Push(gotoIdx)
+
+gfIdx ← _pendingGotoF.Pop()
+Fila.Backfill(gfIdx, Fila.Count.ToString())   // GotoF apunta al inicio del bloque sino
+```
+
+---
+
+### PN-16 · `ExitCondicion` — Resolución final del condicional
+
+Disparo: nodo `condicion : KW_SI ...` al salir.
+
+```
+current ← Fila.Count
+Si hay KW_SINO:
+    Fila.Backfill(_pendingGoto.Pop(), current.ToString())   // Goto salta después del sino
+Sino:
+    Fila.Backfill(_pendingGotoF.Pop(), current.ToString())  // GotoF salta después del si
+```
+
+---
+
+### PN-17 · `ExitCiclo` — Cierre del ciclo
+
+Disparo: nodo `ciclo` al salir (después de visitar el cuerpo).
+
+```
+Fila.Emit(Goto, null, null, _cicloStart.Pop().ToString())    // regresa al inicio
+Fila.Backfill(_pendingGotoF.Pop(), Fila.Count.ToString())    // GotoF sale del ciclo
+```
+
+---
+
+### PN-18 · `ExitCall_stmt` — Llamadas a función
+
+Disparo: nodo `call_stmt : llamada SEMICOLON`.
+
+```
+funcName ← llamada.ID().text
+nArgs    ← llamada.args()?.expresion()?.Length ?? 0
+
+argNames ← array de nArgs strings
+Para i desde nArgs-1 hasta 0:
+    Tipos.Pop()
+    argNames[i] ← Operandos.Pop()    // LIFO → restituye orden original
+
+Para cada arg en argNames:
+    Emitir (Param, null, null, arg)
+
+Emitir (Gosub, null, null, funcName)
+```
+
+---
+
+## El mecanismo de Backfill
+
+Los saltos condicionales (`GotoF`) e incondicionales (`Goto`) se emiten con destino `"?"` cuando aún no se conoce la posición de llegada. El mecanismo de **Backfill** los resuelve en O(1) una vez que se sabe la posición correcta:
+
+```csharp
+// FilaCuadruplos.Backfill
+public void Backfill(int index, string newResult)
+{
+    _list[index] = _list[index] with { Result = newResult };
+}
+```
+
+El flujo completo de un `si/sino` muestra la interacción de los cuatro puntos involucrados:
+
+```
+ExitExpresion  → Emit(Lt, "x", "5", "t0")       quad[0]
+MaybeEmitGotoF → Emit(GotoF, "t0", null, "?")   quad[1]  ← _pendingGotoF.Push(1)
+
+  [si-body: quad[2] ... quad[j-1]]
+
+ExitCuerpo     → Emit(Goto, null, null, "?")     quad[j]  ← _pendingGoto.Push(j)
+               → Backfill(1, (j+1).ToString())           ← GotoF apunta al sino
+
+  [sino-body: quad[j+1] ... quad[k-1]]
+
+ExitCondicion  → Backfill(j, k.ToString())               ← Goto salta después del sino
+```
+
+Y para el ciclo `mientras`:
+
+```
+EnterCiclo     → _cicloStart.Push(count)         count = índice de inicio
+ExitExpresion  → Emit(Lt, "i", "n", "t0")        quad[inicio]
+MaybeEmitGotoF → Emit(GotoF, "t0", null, "?")    ← _pendingGotoF.Push(...)
+
+  [cuerpo del ciclo]
+
+ExitCiclo      → Emit(Goto, null, null, inicio)  ← regresa al inicio
+               → Backfill(gfIdx, Fila.Count)     ← GotoF sale del ciclo
+```
+
+---
+
+## Programas de prueba — fila de cuádruplos
+
+### Programa 1 · Expresiones aritméticas y asignación
+
+```patito
+programa aritmetica;
+vars
+    a, b, c: entero;
+inicio {
+    a = 2;
+    b = 3;
+    c = a + b * 4;
+    escribe("resultado:", c);
+} fin
+```
+
+**Traza de pilas para `c = a + b * 4`:**
+
+| Evento | PilaOperandos | PilaTipos | FilaCuadruplos (nueva entrada) |
+|--------|--------------|-----------|-------------------------------|
+| ExitFactorSimple(`a`) | `[a]` | `[Ent]` | — |
+| ExitFactorSimple(`b`) | `[a, b]` | `[Ent, Ent]` | — |
+| ExitFactorSimple(`4`) | `[a, b, 4]` | `[Ent, Ent, Ent]` | — |
+| ExitTermino(`b * 4`) | `[a, t0]` | `[Ent, Ent]` | `(*, "b", "4", "t0")` |
+| ExitExp(`a + t0`) | `[t1]` | `[Ent]` | `(+, "a", "t0", "t1")` |
+| ExitAsigna(`c = t1`) | `[]` | `[]` | `(=, "t1", null, "c")` |
+
+**Fila de cuádruplos completa:**
+
+```
+#     Op        Left          Right         Result
+────────────────────────────────────────────────────
+   0  =         2             _             a
+   1  =         3             _             b
+   2  *         b             4             t0
+   3  +         a             t0            t1
+   4  =         t1            _             c
+   5  Print     _             _             "resultado:"
+   6  Print     _             _             c
+```
+
+> `t0` almacena `b * 4` (PN-9); `t1` almacena `a + t0` (PN-10). La precedencia está garantizada por la gramática.
+
+---
+
+### Programa 2 · Condicional `si/sino` (`03_condicion.patito`)
+
+```patito
+programa decide;
+vars
+    edad: entero;
+inicio {
+    edad = 18;
+    si (edad < 18) {
+        escribe("menor de edad");
+    } sino {
+        escribe("mayor o igual a 18");
+    };
+} fin
+```
+
+**Fila de cuádruplos:**
+
+```
+#     Op        Left          Right         Result
+────────────────────────────────────────────────────
+   0  =         18            _             edad
+   1  <         edad          18            t0
+   2  GotoF     t0            _             5     ← Backfill en PN-15
+   3  Print     _             _             "menor de edad"
+   4  Goto      _             _             6     ← Backfill en PN-16
+   5  Print     _             _             "mayor o igual a 18"
+```
+
+> `GotoF[2]` apunta al cuádruplo 5 (inicio del `sino`). El `Goto[4]` apunta al 6 (después del estatuto). Ambos destinos se resuelven mediante Backfill: el `GotoF` en **PN-15** (`ExitCuerpo`) y el `Goto` en **PN-16** (`ExitCondicion`).
+
+---
+
+### Programa 3 · Ciclo `mientras/haz` (`04_ciclo.patito`)
+
+```patito
+programa cuenta;
+vars
+    i: entero;
+inicio {
+    i = 0;
+    mientras (i < 5) haz {
+        escribe("i =", i);
+        i = i + 1;
+    };
+} fin
+```
+
+**Fila de cuádruplos:**
+
+```
+#     Op        Left          Right         Result
+────────────────────────────────────────────────────
+   0  =         0             _             i
+   1  <         i             5             t0
+   2  GotoF     t0            _             8     ← Backfill en PN-17
+   3  Print     _             _             "i ="
+   4  Print     _             _             i
+   5  +         i             1             t1
+   6  =         t1            _             i
+   7  Goto      _             _             1     ← ExitCiclo (PN-17)
+```
+
+> **PN-14** (`EnterCiclo`) registra `_cicloStart = 1` (el índice del primer cuádruplo de la condición).  
+> **PN-17** (`ExitCiclo`) emite `Goto(1)` y hace `Backfill(2, "8")`.
+
+---
+
+### Programa 4 · Función con ciclo interno (`05_funcion.patito`)
+
+```patito
+programa concarga;
+vars
+    a: entero;
+
+nula saludar (n: entero) {
+    vars
+        i: entero;
+    i = 0;
+    mientras (i < n) haz {
+        escribe("hola numero", i);
+        i = i + 1;
+    };
+};
+
+inicio {
+    a = 3;
+    saludar(a);
+} fin
+```
+
+**Fila de cuádruplos:**
+
+```
+#     Op        Left          Right         Result
+────────────────────────────────────────────────────
+   0  =         0             _             i          ← cuerpo de saludar
+   1  <         i             n             t0
+   2  GotoF     t0            _             8          ← Backfill en PN-17
+   3  Print     _             _             "hola numero"
+   4  Print     _             _             i
+   5  +         i             1             t1
+   6  =         t1            _             i
+   7  Goto      _             _             1
+   8  =         3             _             a          ← cuerpo principal
+   9  Param     _             _             a          ← PN-18
+  10  Gosub     _             _             saludar    ← PN-18
+```
+
+> Los cuádruplos 0–7 corresponden al cuerpo de `saludar`; los 8–10 al cuerpo principal. Toda la generación ocurre en **un único recorrido** del árbol. `Param[9]` pasa el argumento `a` y `Gosub[10]` transfiere el control a la función.
+
+---
+
+## Precedencia de operadores — garantía estructural
+
+La precedencia no requiere ninguna lógica explícita en los algoritmos. Está codificada directamente en la jerarquía de la gramática:
+
+```
+expresion
+  └─ exp               ← nivel + / -   (ExitExp   = PN-10)
+       └─ termino      ← nivel * / /   (ExitTermino = PN-9)
+            └─ factor  ← hoja          (ExitFactorSimple = PN-8)
+```
+
+Como ANTLR4 visita en pre-orden y llama los `Exit…` en post-orden, los `ExitTermino` siempre se ejecutan **antes** que los `ExitExp` del nivel superior, lo que garantiza que `*` y `/` se evalúen primero.
+
+---
+
+## Ver también
+
+- [`estructuras.md`](estructuras.md) — diseño de `PilaOperadores`, `PilaOperandos`, `PilaTipos`, `FilaCuadruplos` y `QuadrupleEmitter`.
+- [`puntos_neuralgicos.md`](puntos_neuralgicos.md) — tabla completa PN-1 a PN-18 con disparadores y acciones.
+- [`cubo_semantico.md`](cubo_semantico.md) — tabla de tipos consultada en `EmitBinary`.
+- [`pruebas.md`](pruebas.md) — suite de pruebas unitarias de generación de código (`CodeGenTests.cs`).
+- [`gramatica.md`](gramatica.md) — las producciones (`asigna`, `condicion`, `ciclo`, `factor`…) que disparan cada punto neurálgico.
