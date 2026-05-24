@@ -250,19 +250,88 @@ mientras (i < 5) haz { i = i + 1; };
 
 ## Cómo correr las pruebas
 
+### Scripts de shell (recomendado)
+
+Todos los scripts están en la raíz del repositorio. Deben darse permisos de ejecución la primera vez:
+
 ```bash
-# Toda la suite (Scanner + Parser + Semántica + CodeGen)
+chmod +x build.sh compile-example.sh compile-examples.sh run-all.sh show-quads.sh
+```
+
+| Script | Qué hace |
+|--------|----------|
+| `./build.sh` | Compila `Patito.Compiler` (Release) y `Patito.Tests` (Debug) sin ejecutar tests. |
+| `./build.sh --compiler` | Solo compila el compilador. |
+| `./build.sh --tests` | Solo compila el proyecto de pruebas. |
+| `./compile-example.sh <archivo.patito>` | Compila un programa Patito y muestra el resultado (tokens, tablas, errores). |
+| `./compile-example.sh <archivo.patito> --quads` | Igual que el anterior pero además muestra la fila de cuádruplos. |
+| `./compile-examples.sh` | Corre el compilador sobre todos los ejemplos **válidos** y verifica que pasen. |
+| `./compile-examples.sh --all` | Igual, pero incluye también los `invalido_*` verificando que fallen. |
+| `./show-quads.sh` | Muestra código fuente + cuádruplos de todos los ejemplos válidos con colores. |
+| `./show-quads.sh <archivo.patito>` | Igual, solo para un archivo específico. |
+| `./run-all.sh` | Orquesta las 4 fases: build → tests unitarios → demo quads → ejemplos. |
+| `./run-all.sh --no-demo` | Igual pero omite la fase de demo de cuádruplos (más rápido). |
+
+### Comandos `dotnet test` y filtros
+
+```bash
+# ── Toda la suite ──────────────────────────────────────────────────────────
 dotnet test
 
-# Solo un archivo
+# ── Por archivo de prueba ──────────────────────────────────────────────────
+dotnet test --filter "FullyQualifiedName~ScannerTests"
+dotnet test --filter "FullyQualifiedName~ParserTests"
+dotnet test --filter "FullyQualifiedName~SemanticCubeTests"
+dotnet test --filter "FullyQualifiedName~VariableTableTests"
+dotnet test --filter "FullyQualifiedName~FunctionDirectoryTests"
 dotnet test --filter "FullyQualifiedName~SemanticAnalyzerTests"
 dotnet test --filter "FullyQualifiedName~CodeGenTests"
 
-# Solo una prueba
+# ── Demo de cuadruplos (salida formateada en "Standard Output") ────────────
+dotnet test --filter "FullyQualifiedName~QuadruplesDemoTests" -v normal
+
+# ── Un test específico por nombre ──────────────────────────────────────────
 dotnet test --filter "FullyQualifiedName~Funcion_Nula_ConParametros_Pasa"
+dotnet test --filter "FullyQualifiedName~Demo_03_Condicion"
+
+# ── Solo tests de una fase (usando DisplayName) ────────────────────────────
+dotnet test --filter "FullyQualifiedName~CodeGenTests" -v normal
+
+# ── Tests sin el demo (más rápido en CI) ──────────────────────────────────
+dotnet test --filter "FullyQualifiedName!~QuadruplesDemoTests"
 ```
 
-También está disponible el script [`../test-samples.sh`](../test-samples.sh) que ejecuta el binario `patitoc` contra cada archivo de [`../examples/`](../examples) e imprime una tabla comparativa "esperado vs. obtenido". Es útil como *smoke-test* visual antes de cada entrega.
+### Referencia de filtros por clase
+
+| Clase de test | Filtro | Tests cubiertos |
+|---|---|---|
+| `ScannerTests` | `FullyQualifiedName~ScannerTests` | 12 — tokens, longest-match, comentarios |
+| `ParserTests` | `FullyQualifiedName~ParserTests` | 14 — producciones, precedencia, archivos |
+| `SemanticCubeTests` | `FullyQualifiedName~SemanticCubeTests` | 9 — todas las celdas del cubo |
+| `VariableTableTests` | `FullyQualifiedName~VariableTableTests` | 4 — declarar, duplicado, lookup |
+| `FunctionDirectoryTests` | `FullyQualifiedName~FunctionDirectoryTests` | 4 — directorio de funciones |
+| `SemanticAnalyzerTests` | `FullyQualifiedName~SemanticAnalyzerTests` | 13 — end-to-end semántica |
+| `CodeGenTests` | `FullyQualifiedName~CodeGenTests` | 24 — PN-8 a PN-18, Backfill |
+| `QuadruplesDemoTests` | `FullyQualifiedName~QuadruplesDemoTests` | 12 — demo visual con cuádruplos |
+
+### Flujo recomendado antes de cada entrega
+
+```bash
+# 1. Compilar todo
+./build.sh
+
+# 2. Correr suite completa sin demo (rápido)
+dotnet test --filter "FullyQualifiedName!~QuadruplesDemoTests"
+
+# 3. Verificar ejemplos .patito (válidos e inválidos)
+./compile-examples.sh --all
+
+# 4. Revisar cuadruplos visualmente
+./show-quads.sh
+
+# 5. O todo de una vez:
+./run-all.sh
+```
 
 ## Resumen de fallos esperados
 

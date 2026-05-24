@@ -290,15 +290,15 @@ public class CodeGenTests
     [InlineData("!=", QuadOp.Neq)]
     public void OperadorRelacional_EmiteQuadCorrespondiente(string op, QuadOp expectedOp)
     {
-        var src = $"""
+        var src = $$"""
             programa t;
             vars
                 a, b: entero;
-            inicio {{
-                si (a {op} b) {{
+            inicio {
+                si (a {{op}} b) {
                     escribe("si");
-                }};
-            }} fin
+                };
+            } fin
             """;
         var qs = Quads(src);
         // [0] = quad relacional, [1] = GotoF, [2] = Print

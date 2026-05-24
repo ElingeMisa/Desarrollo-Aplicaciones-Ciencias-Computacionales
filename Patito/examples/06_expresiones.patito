@@ -6,7 +6,7 @@ vars
 inicio {
     a = -5;
     b = +3;
-    c = (a + b) * 2 - 7 / 1;
+    c = (a + b) * 2 - 7;
     r = 2.5 + 1.5;
     si (c == -11) {
         escribe("c es -11 como esperabamos");
