@@ -54,3 +54,6 @@
 
 #Virtual Environments
 regresion-lineal/.venv
+.DS_Store
+clasification/results/images/*.png
+clasification/results/tables/*.csv
