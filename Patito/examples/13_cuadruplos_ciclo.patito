@@ -1,0 +1,43 @@
+// =============================================================================
+//  13_cuadruplos_ciclo.patito
+//  Ejemplo positivo — Entrega 4: Cuadruplos para estatuto ciclico.
+//
+//  Demuestra:
+//    * mientras simple con acumulador
+//    * ciclo con condicion !=
+//    * ciclos anidados
+//
+//  Cuadruplos esperados para el primer ciclo:
+//    0  =       0      _    i
+//    1  =       0      _    suma
+//    2  <       i      10   t0       <- inicio del ciclo (EnterCiclo guarda idx=2)
+//    3  GotoF   t0     _    8        <- Backfill en ExitCiclo
+//    4  +       suma   i    t1
+//    5  =       t1     _    suma
+//    6  +       i      1    t2
+//    7  =       t2     _    i
+//    8  Goto    _      _    2        <- regresa al inicio
+//    (Backfill de GotoF[3] = 9)
+// =============================================================================
+
+programa ciclos;
+vars
+    i, j, suma: entero;
+
+inicio {
+    // --- ciclo acumulador ---
+    i = 0;
+    suma = 0;
+    mientras (i < 10) haz {
+        suma = suma + i;
+        i = i + 1;
+    };
+    escribe("suma 0..9 =", suma);
+
+    // --- ciclo con desigualdad ---
+    j = 100;
+    mientras (j != 0) haz {
+        j = j - 10;
+    };
+    escribe("j al final:", j);
+} fin

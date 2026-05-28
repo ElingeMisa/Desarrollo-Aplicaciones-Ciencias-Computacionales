@@ -1,0 +1,9 @@
+Considerando el resultado que obtuviste en las partes 1, 2 y 3 del proyecto (Scanner y Parser, Semántica y traducción de expresiones y estatutos básicos para Patito), quiero realizar lo siguitne: 
+
+Generar los cuádruplos para los estatutos condicionales y cíclicos.
+Generar los cuádruplos relacionados a la declaración e invocación de Funciones.
+Agregar los diagramas del lenguaje Patito ahora con los puntos neurálgicos claramente señalados, así como la descripción (breve) de cada acción. Agrega la distribución de Direcciones Virtuales que diseñaste.
+
+Recordemos actualizar nuestra documentacion y scripts para correr todos los tests, hacer el build y agregar ejemplos para cada caso, tanto positivos como negativos 
+En el futuro vamos a raducir las variables, constantes y temporales a sus respectivas Direcciones virtuales. (por ahora omitiremos esta parte)
+    Para estos casos las direcciones virtuales quiero un estructura con nuemraciones específicas para cada segmento de mi stack de memoria, en donde quiero iniciar la memoria global con un id 18000, 

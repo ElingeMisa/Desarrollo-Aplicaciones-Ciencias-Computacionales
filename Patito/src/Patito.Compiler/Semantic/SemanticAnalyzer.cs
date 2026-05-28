@@ -37,7 +37,15 @@
 //                                   GotoF (sin sino).
 //      [PN-17] ExitCiclo          : emite Goto al inicio y hace Backfill del
 //                                   GotoF de la condicion del mientras.
-//      [PN-18] ExitCall_stmt      : emite Param + Gosub para llamadas de funcion.
+//      [PN-18] ExitCall_stmt      : emite ERA + Param + Gosub para llamadas.
+//
+//  Puntos neuralgicos implementados en Entrega 4 (funciones completas):
+//
+//      [PN-7b] EnterFunc_body     : registra StartQuad (indice del primer
+//                                   cuadruplo del cuerpo de la funcion).
+//      [PN-7c] ExitFunc_body      : emite EndFunc al cerrar el cuerpo.
+//      [PN-18] ExitCall_stmt      : actualizado para emitir ERA antes de Param,
+//                                   y pasar startQuad como Result del Gosub.
 // =============================================================================
 
 using System.Collections.Generic;
@@ -197,18 +205,31 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
     }
 
     // ==========================================================================
-    //  [PN-7] Manejo del alcance activo (push/pop).
+    //  [PN-7] Manejo del alcance activo (push/pop) + StartQuad + EndFunc.
+    //
+    //   EnterFunc_body: registra el indice de inicio del cuerpo de la funcion
+    //   en FunctionInfo.StartQuad (PN-7b).
+    //   ExitFunc_body:  emite EndFunc para que la maquina virtual sepa donde
+    //   termina la funcion y pueda restaurar el contexto (PN-7c).
     // ==========================================================================
     public override void EnterFunc_body(PatitoParser.Func_bodyContext ctx)
     {
         if (_funcByBody.TryGetValue(ctx, out var info))
+        {
+            // [PN-7b] Guardar el indice del primer cuadruplo del cuerpo.
+            info.StartQuad = _emitter.Fila.Count;
             _scopeStack.Push(info);
+        }
     }
 
     public override void ExitFunc_body(PatitoParser.Func_bodyContext ctx)
     {
         if (_scopeStack.Count > 0)
-            _scopeStack.Pop();
+        {
+            var info = _scopeStack.Pop();
+            // [PN-7c] Emitir EndFunc al terminar el cuerpo de la funcion.
+            _emitter.Fila.Emit(QuadOp.EndFunc, null, null, info.Name);
+        }
     }
 
     private FunctionInfo? CurrentFunction => _scopeStack.Count > 0 ? _scopeStack.Peek() : null;
@@ -593,7 +614,13 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
     }
 
     // ==========================================================================
-    //  [PN-18] ExitCall_stmt : emite Param (por cada arg) y Gosub.
+    //  [PN-18] ExitCall_stmt : emite ERA + Param (por cada arg) + Gosub.
+    //
+    //  Secuencia de cuadruplos para f(a, b):
+    //    ERA  _  _  f          <- reserva el Espacio de Registro de Activacion
+    //    Param  _  _  a        <- pasa cada argumento en orden
+    //    Param  _  _  b
+    //    Gosub  f  _  startQ   <- transfiere control; Result = indice de inicio
     // ==========================================================================
     public override void ExitCall_stmt(PatitoParser.Call_stmtContext ctx)
     {
@@ -602,24 +629,13 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         var funcName = llamada.ID()?.GetText();
         if (funcName is null) return;
 
-        // Los argumentos ya fueron evaluados; sus nombres estan en las pilas
-        // en orden de evaluacion (el ultimo arg en el tope).
-        int nArgs = llamada.args()?.expresion()?.Length ?? 0;
-        var argNames = new string[nArgs];
-        for (int i = nArgs - 1; i >= 0; i--)
-        {
-            _emitter.Tipos.Pop();
-            argNames[i] = _emitter.Operandos.Pop();
-        }
-        foreach (var arg in argNames)
-            _emitter.Fila.Emit(QuadOp.Param, null, null, arg);
-
-        _emitter.Fila.Emit(QuadOp.Gosub, null, null, funcName);
+        EmitCallSequence(funcName, llamada.args()?.expresion()?.Length ?? 0);
     }
 
     // ==========================================================================
     //  FactorLlamada: funcion invocada como operando dentro de una expresion.
-    //  Mantiene las pilas consistentes emitiendo Gosub y apilando el retorno.
+    //  Mantiene las pilas consistentes emitiendo ERA+Param+Gosub y apilando
+    //  el valor de retorno para que el padre (termino/exp) lo consuma.
     // ==========================================================================
     public override void ExitFactorLlamada(PatitoParser.FactorLlamadaContext ctx)
     {
@@ -628,23 +644,42 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         var funcName = llamada.ID()?.GetText();
         if (funcName is null) return;
 
-        int nArgs = llamada.args()?.expresion()?.Length ?? 0;
-        var argNames = new string[nArgs];
-        for (int i = nArgs - 1; i >= 0; i--)
-        {
-            _emitter.Tipos.Pop();
-            argNames[i] = _emitter.Operandos.Pop();
-        }
-        foreach (var arg in argNames)
-            _emitter.Fila.Emit(QuadOp.Param, null, null, arg);
-
-        _emitter.Fila.Emit(QuadOp.Gosub, null, null, funcName);
+        EmitCallSequence(funcName, llamada.args()?.expresion()?.Length ?? 0);
 
         // Apilar valor de retorno para que el padre (termino/exp) lo consuma
         SemanticType returnType = SemanticType.Error;
         if (_directory.TryLookup(funcName, out var info))
             returnType = info.ReturnType;
         _emitter.PushOperand($"{funcName}_ret", returnType);
+    }
+
+    // ==========================================================================
+    //  Helper: emite ERA + Param* + Gosub para cualquier llamada a funcion.
+    // ==========================================================================
+    private void EmitCallSequence(string funcName, int nArgs)
+    {
+        // Los argumentos ya fueron evaluados; sus nombres estan en las pilas
+        // en orden de evaluacion (el ultimo arg en el tope). Sacarlos en LIFO
+        // y reordenar para restituir el orden original de los argumentos.
+        var argNames = new string[nArgs];
+        for (int i = nArgs - 1; i >= 0; i--)
+        {
+            _emitter.Tipos.Pop();
+            argNames[i] = _emitter.Operandos.Pop();
+        }
+
+        // ERA: reservar el espacio de activacion ANTES de pasar argumentos
+        _emitter.Fila.Emit(QuadOp.Era, null, null, funcName);
+
+        // Param: un cuadruplo por argumento en orden de declaracion
+        foreach (var arg in argNames)
+            _emitter.Fila.Emit(QuadOp.Param, null, null, arg);
+
+        // Gosub: Left=nombre de funcion, Result=startQuad (o "?" si no disponible)
+        string startQuad = "?";
+        if (_directory.TryLookup(funcName, out var fi) && fi.StartQuad >= 0)
+            startQuad = fi.StartQuad.ToString();
+        _emitter.Fila.Emit(QuadOp.Gosub, funcName, null, startQuad);
     }
 
     // ==========================================================================

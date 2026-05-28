@@ -1,6 +1,6 @@
 # Generación de Código Intermedio — Cuádruplos
 
-> Documentación de la **Entrega 3** del compilador. Ver el [índice general](README.md) para más contexto.
+> Documentación actualizada a la **Entrega 4** del compilador. Ver el [índice general](README.md) para más contexto.
 
 Un **cuádruplo** es la unidad mínima de código intermedio: una instrucción de la forma `(Op, Left, Right, Result)` que puede ser ejecutada directamente por una máquina virtual o traducida a código objeto. Este documento explica el formato de los cuádruplos de Patito, los algoritmos que los generan y el resultado final para varios programas de prueba.
 
@@ -41,9 +41,10 @@ El campo `Index` (número de cuádruplo, base 0) lo asigna `FilaCuadruplos.Emit`
 | `GotoF`         | `(GotoF, cond, null, N)`              | `if !cond goto quad[N]`                             |
 | `Goto`          | `(Goto, null, null, N)`               | `goto quad[N]`                                      |
 | `Print`         | `(Print, null, null, val)`            | `escribe(val)`                                      |
+| `Era`           | `(ERA, null, null, func)`             | Reserva el Espacio de Registro de Activación para `func` antes de pasar argumentos |
 | `Param`         | `(Param, null, null, arg)`            | Pasa el argumento `arg` a la función siguiente      |
-| `Gosub`         | `(Gosub, null, null, func)`           | Llama a la función `func`                           |
-| `EndFunc`       | `(EndFunc, null, null, func)`         | Marca el fin del cuerpo de `func` (reservado)       |
+| `Gosub`         | `(Gosub, func, null, startQ)`         | Llama a `func`; `Left=nombre`, `Result=startQuad`   |
+| `EndFunc`       | `(EndFunc, null, null, func)`         | Marca el fin del cuerpo de `func`                   |
 
 ---
 
@@ -405,7 +406,7 @@ inicio {
 
 ---
 
-### Programa 4 · Función con ciclo interno (`05_funcion.patito`)
+### Programa 4 · Función con ciclo interno (`05_funcion.patito`) — Entrega 4
 
 ```patito
 programa concarga;
@@ -428,12 +429,12 @@ inicio {
 } fin
 ```
 
-**Fila de cuádruplos:**
+**Fila de cuádruplos (Entrega 4):**
 
 ```
 #     Op        Left          Right         Result
 ────────────────────────────────────────────────────
-   0  =         0             _             i          ← cuerpo de saludar
+   0  =         0             _             i          ← cuerpo de saludar (StartQuad=0)
    1  <         i             n             t0
    2  GotoF     t0            _             8          ← Backfill en PN-17
    3  Print     _             _             "hola numero"
@@ -441,12 +442,60 @@ inicio {
    5  +         i             1             t1
    6  =         t1            _             i
    7  Goto      _             _             1
-   8  =         3             _             a          ← cuerpo principal
-   9  Param     _             _             a          ← PN-18
-  10  Gosub     _             _             saludar    ← PN-18
+   8  EndFunc   _             _             saludar    ← PN-7c: cierre del cuerpo
+   9  =         3             _             a          ← cuerpo principal
+  10  ERA       _             _             saludar    ← PN-18: reserva activación
+  11  Param     _             _             a          ← PN-18: pasa argumento
+  12  Gosub     saludar       _             0          ← PN-18: startQuad=0
 ```
 
-> Los cuádruplos 0–7 corresponden al cuerpo de `saludar`; los 8–10 al cuerpo principal. Toda la generación ocurre en **un único recorrido** del árbol. `Param[9]` pasa el argumento `a` y `Gosub[10]` transfiere el control a la función.
+> **PN-7b** (`EnterFunc_body`) registra `StartQuad = 0` para `saludar`.  
+> **PN-7c** (`ExitFunc_body`) emite `EndFunc[8]`.  
+> **PN-18** (`ExitCall_stmt`) emite la secuencia `ERA[10] + Param[11] + Gosub[12]`, con `Gosub.Left = "saludar"` y `Gosub.Result = "0"` (el `StartQuad` registrado en PN-7b).
+
+### Programa 5 · Funciones múltiples (`14_cuadruplos_funciones.patito`) — Entrega 4
+
+```patito
+programa funciones;
+vars
+    a, b: entero;
+
+nula doble (x: entero) {
+    vars
+        resultado: entero;
+    resultado = x + x;
+    escribe("doble:", resultado);
+};
+
+inicio {
+    a = 5;
+    doble(a);
+    b = 2;
+    doble(b);
+} fin
+```
+
+**Fila de cuádruplos:**
+
+```
+#     Op        Left          Right         Result
+────────────────────────────────────────────────────
+   0  +         x             x             t0        ← cuerpo de doble (StartQuad=0)
+   1  =         t0            _             resultado
+   2  Print     _             _             "doble:"
+   3  Print     _             _             resultado
+   4  EndFunc   _             _             doble      ← PN-7c
+   5  =         5             _             a          ← cuerpo principal
+   6  ERA       _             _             doble      ← primera llamada
+   7  Param     _             _             a
+   8  Gosub     doble         _             0
+   9  =         2             _             b          ← segunda llamada
+  10  ERA       _             _             doble
+  11  Param     _             _             b
+  12  Gosub     doble         _             0
+```
+
+> Cada llamada genera su propia secuencia `ERA + Param + Gosub` independiente. El `StartQuad` es siempre el mismo `0` porque el cuerpo de `doble` no cambia entre llamadas.
 
 ---
 

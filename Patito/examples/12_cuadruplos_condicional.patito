@@ -1,0 +1,44 @@
+// =============================================================================
+//  12_cuadruplos_condicional.patito
+//  Ejemplo positivo — Entrega 4: Cuadruplos para estatuto condicional.
+//
+//  Demuestra:
+//    * si simple (sin sino): GotoF + Backfill al final
+//    * si-sino completo:     GotoF + Goto + Backfill en dos puntos
+//    * condiciones anidadas
+//
+//  Cuadruplos esperados para el si-sino del bloque principal:
+//    0  =        18      _    edad
+//    1  <        edad    18   t0
+//    2  GotoF    t0      _    5
+//    3  Print    _       _    "menor de edad"
+//    4  Goto     _       _    6
+//    5  Print    _       _    "mayor o igual"
+// =============================================================================
+
+programa condicionales;
+vars
+    edad, nota: entero;
+
+inicio {
+    // --- si-sino basico ---
+    edad = 18;
+    si (edad < 18) {
+        escribe("menor de edad");
+    } sino {
+        escribe("mayor o igual");
+    };
+
+    // --- si simple (sin sino) ---
+    nota = 85;
+    si (nota > 70) {
+        escribe("aprobado");
+    };
+
+    // --- condicion con igualdad ---
+    si (nota == 100) {
+        escribe("perfecto");
+    } sino {
+        escribe("no perfecto");
+    };
+} fin

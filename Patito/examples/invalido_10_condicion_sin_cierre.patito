@@ -1,0 +1,16 @@
+// =============================================================================
+//  invalido_10_condicion_sin_cierre.patito
+//  Ejemplo NEGATIVO — Entrega 4: Condicional sin punto y coma al final.
+//
+//  Error esperado: error de PARSER — falta ';' despues del si.
+// =============================================================================
+
+programa error_condicion;
+vars
+    x: entero;
+inicio {
+    x = 5;
+    si (x > 0) {
+        escribe("positivo");
+    }
+} fin

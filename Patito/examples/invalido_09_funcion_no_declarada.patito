@@ -1,0 +1,14 @@
+// =============================================================================
+//  invalido_09_funcion_no_declarada.patito
+//  Ejemplo NEGATIVO — Entrega 4: Llamada a funcion no declarada.
+//
+//  Error esperado: UndeclaredFunction en 'calcular'
+// =============================================================================
+
+programa error_funcion;
+vars
+    x: entero;
+inicio {
+    x = 10;
+    calcular(x);
+} fin

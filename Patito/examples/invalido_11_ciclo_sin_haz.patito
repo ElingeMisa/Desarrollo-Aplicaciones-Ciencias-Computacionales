@@ -1,0 +1,17 @@
+// =============================================================================
+//  invalido_11_ciclo_sin_haz.patito
+//  Ejemplo NEGATIVO — Entrega 4: Ciclo mientras sin la palabra 'haz'.
+//
+//  Error esperado: error de PARSER — falta 'haz' en el ciclo mientras.
+// =============================================================================
+
+programa error_ciclo;
+vars
+    i: entero;
+inicio {
+    i = 0;
+    mientras (i < 5) {
+        escribe(i);
+        i = i + 1;
+    };
+} fin

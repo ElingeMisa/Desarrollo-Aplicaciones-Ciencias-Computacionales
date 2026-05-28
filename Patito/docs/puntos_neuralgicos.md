@@ -1,6 +1,6 @@
 # Puntos Neurálgicos del Análisis Semántico
 
-> Documentación de la **Entrega 2** del compilador. Ver el [índice general](README.md) para más contexto.
+> Documentación actualizada a la **Entrega 4** del compilador. Ver el [índice general](README.md) para más contexto.
 
 Un **punto neurálgico** es un instante específico durante el recorrido del árbol de derivación en el que el compilador realiza una acción semántica (registrar un símbolo, validar un tipo, emitir un cuadruplo, etc.). En la implementación con ANTLR4, cada método `EnterX`/`ExitX` del listener `SemanticAnalyzer` puede ser un punto neurálgico. Las reglas gramaticales en las que se enganchan estos métodos están detalladas en [`gramatica.md`](gramatica.md), y las estructuras que se llenan en cada punto, en [`estructuras.md`](estructuras.md).
 
@@ -15,6 +15,8 @@ La siguiente tabla resume los puntos neurálgicos implementados en la Entrega 2,
 | PN-5  | `EnterFactorSimple`      | `factor : … (OP_MAS|OP_MENOS)? simple_atom` con `simple_atom : ID` | Verifica que el `ID` referenciado en una expresión exista. | **Variable usada sin declarar** → `UndeclaredVariable`.                                            |
 | PN-6  | `EnterLlamada`           | `llamada : ID ( args? )`                 | Verifica que la función invocada exista en el directorio.                    | **Función invocada sin declarar** → `UndeclaredFunction`.                                          |
 | PN-7  | `EnterFunc_body` / `ExitFunc_body` | `func_body : { vars estatuto* }` | Empuja/saca la `FunctionInfo` activa de una pila de alcances, para que PN-4/PN-5 resuelvan locales antes que globales. | — (es estructural)                                                                                  |
+| PN-7b | `EnterFunc_body`                   | `func_body : { vars estatuto* }` | **[Entrega 4]** Registra `FunctionInfo.StartQuad = FilaCuadruplos.Count` justo antes de visitar el cuerpo. Ese índice es el punto de entrada al que apunta `Gosub`. | — |
+| PN-7c | `ExitFunc_body`                    | `func_body : { vars estatuto* }` | **[Entrega 4]** Emite `EndFunc(_, _, funcName)` al terminar el cuerpo para que la MV pueda restaurar el contexto de ejecución. | — |
 
 ## Orden de ejecución
 
@@ -104,7 +106,60 @@ Los siguientes puntos neurálgicos extienden la tabla de la Entrega 2. Todos ope
 | PN-15  | `ExitCuerpo`              | `cuerpo : { estatuto* }`  (cuando padre es CondicionContext) | Solo para el **primer** `cuerpo` de una condición que tiene `sino`: emite `Goto(_, _, ?)` (para saltar el bloque sino), apila su índice en `_pendingGoto`, y hace `Backfill` del GotoF pendiente apuntando al inicio del sino. |
 | PN-16  | `ExitCondicion`           | `condicion : si ( expresion ) cuerpo (sino cuerpo)? ;`       | **Con sino**: hace `Backfill(_pendingGoto.Pop(), current)` para que el Goto salte después del sino. **Sin sino**: hace `Backfill(_pendingGotoF.Pop(), current)` para que el GotoF salte después del si. |
 | PN-17  | `ExitCiclo`               | `ciclo : mientras ( expresion ) haz cuerpo ;`                | Emite `Goto(_, _, start)` donde `start = _cicloStart.Pop()`. Luego hace `Backfill(_pendingGotoF.Pop(), current)` para que el GotoF salte después del ciclo completo. |
-| PN-18  | `ExitCall_stmt`           | `call_stmt : llamada ;`                                      | Saca los argumentos de las pilas (en orden inverso al push → LIFO → restituye orden correcto), emite `Param(_, _, argName)` por cada argumento y `Gosub(_, _, funcName)`. |
+| PN-18  | `ExitCall_stmt`           | `call_stmt : llamada ;`                                      | **[Entrega 4]** Saca los argumentos de las pilas. Emite `ERA(_, _, funcName)` para reservar el espacio de activación, luego `Param(_, _, argName)` por cada argumento y finalmente `Gosub(funcName, _, startQuad)` donde `startQuad = FunctionInfo.StartQuad`. |
+
+---
+
+## Puntos neurálgicos de la Entrega 4 — Funciones completas
+
+La Entrega 4 extiende PN-7 y actualiza PN-18 para completar el ciclo de vida de las funciones en la fila de cuádruplos.
+
+### Diagrama de ciclo de vida de una función
+
+```
+DECLARACIÓN (antes de inicio)
+   EnterFunc_body ──[PN-7b]──→ info.StartQuad = FilaCuadruplos.Count
+   [cuadruplos del cuerpo]
+   ExitFunc_body  ──[PN-7c]──→ Emit(EndFunc, _, _, funcName)
+
+INVOCACIÓN (dentro de inicio o de otra función)
+   ExitCall_stmt  ──[PN-18]──→ Emit(ERA, _, _, funcName)
+                               Emit(Param, _, _, arg_1)
+                               ...
+                               Emit(Param, _, _, arg_n)
+                               Emit(Gosub, funcName, _, startQuad)
+```
+
+### Tabla de puntos neurálgicos de Entrega 4
+
+| #      | Punto neurálgico  | Disparador                        | Acción semántica                                                                           |
+|--------|-------------------|-----------------------------------|--------------------------------------------------------------------------------------------|
+| PN-7b  | `EnterFunc_body`  | `func_body : { vars estatuto* }`  | Registra `FunctionInfo.StartQuad = FilaCuadruplos.Count` (índice del primer cuádruplo del cuerpo). |
+| PN-7c  | `ExitFunc_body`   | `func_body : { vars estatuto* }`  | Emite `EndFunc(_, _, funcName)` para señalar el fin del cuerpo de la función.              |
+| PN-18  | `ExitCall_stmt`   | `call_stmt : llamada ;`           | Emite `ERA + Param* + Gosub` con `Gosub.Left = funcName` y `Gosub.Result = startQuad`.    |
+
+### Ejemplo de secuencia para `saludar(a)`
+
+```
+// Declaración de saludar:
+EnterFunc_body(saludar) [PN-7b] → saludar.StartQuad = 0
+  quad[0]  =       0     _    i
+  quad[1]  <       i     n    t0
+  quad[2]  GotoF   t0    _    8
+  quad[3]  Print   _     _    "hola numero"
+  quad[4]  Print   _     _    i
+  quad[5]  +       i     1    t1
+  quad[6]  =       t1    _    i
+  quad[7]  Goto    _     _    1
+ExitFunc_body(saludar) [PN-7c] → emit quad[8] EndFunc _ _ saludar
+
+// Cuerpo principal:
+  quad[9]  =       3     _    a
+ExitCall_stmt(saludar(a)) [PN-18] →
+  quad[10] ERA     _     _    saludar
+  quad[11] Param   _     _    a
+  quad[12] Gosub   saludar  _  0     ← Result = saludar.StartQuad
+```
 
 ### Orden de ejecución (Entrega 3)
 

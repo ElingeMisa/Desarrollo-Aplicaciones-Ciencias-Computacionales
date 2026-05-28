@@ -37,6 +37,12 @@ public sealed record CompileResult(
     /// Null si el parser fallo o si no se llego a la fase semantica.
     /// </summary>
     public IReadOnlyList<Quadruple>? Quads => Semantic?.Quads;
+
+    /// <summary>
+    /// Directorio de funciones, con StartQuad de cada funcion (Entrega 4).
+    /// Null si el parser fallo.
+    /// </summary>
+    public FunctionDirectory? FunctionDirectory => Semantic?.Directory;
 }
 
 /// <summary>

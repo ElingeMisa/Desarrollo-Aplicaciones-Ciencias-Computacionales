@@ -26,6 +26,7 @@
 // =============================================================================
 
 using System.Collections.Generic;
+using System.Linq;
 using Patito.Compiler;
 using Patito.Compiler.CodeGen;
 using Xunit;
@@ -468,8 +469,10 @@ public class CodeGenTests
     // -------------------------------------------------------------------------
 
     [Fact]
-    public void LlamadaSinArgs_EmiteSoloGosub()
+    public void LlamadaSinArgs_EmiteEraYGosub()
     {
+        // Entrega 4: la secuencia es ERA(f) + Gosub(f, startQ).
+        // f tiene solo EndFunc, asi que su cuerpo es el cuadruplo 0.
         const string src = """
             programa t;
             nula f () { };
@@ -478,15 +481,16 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        // Ultima quad emitida en el cuerpo principal: Gosub
-        var gosub = qs[^1];
-        Assert.Equal(QuadOp.Gosub, gosub.Op);
-        Assert.Equal("f", gosub.Result);
+        // f_body: EndFunc[0]
+        // main:   ERA[1], Gosub[2]
+        AssertQuad(qs, 1, QuadOp.Era,   null, null, "f");
+        AssertQuad(qs, 2, QuadOp.Gosub, "f",  null, "0");
     }
 
     [Fact]
-    public void LlamadaConUnArg_EmiteParamYGosub()
+    public void LlamadaConUnArg_EmiteEraParamYGosub()
     {
+        // Secuencia esperada: ERA(f) + Param(n) + Gosub(f, startQ).
         const string src = """
             programa t;
             vars
@@ -498,20 +502,23 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        // Quads del cuerpo principal: [0](Assign "5" null "n"), [1](Param null null "n"), [2](Gosub null null "f")
-        // (puede haber quads de la funcion f antes, pero los del main van despues)
+        // f_body: EndFunc[0]
+        // main:   Assign[1], ERA[2], Param[3], Gosub[4]
+        var era   = qs[^3];
         var param = qs[^2];
         var gosub = qs[^1];
+        Assert.Equal(QuadOp.Era,   era.Op);
+        Assert.Equal("f",          era.Result);
         Assert.Equal(QuadOp.Param, param.Op);
         Assert.Equal("n",          param.Result);
         Assert.Equal(QuadOp.Gosub, gosub.Op);
-        Assert.Equal("f",          gosub.Result);
+        Assert.Equal("f",          gosub.Left);
     }
 
     [Fact]
-    public void LlamadaConDosArgs_EmiteParamsEnOrdenYGosub()
+    public void LlamadaConDosArgs_EmiteEraParamsEnOrdenYGosub()
     {
-        // f(a, 7) debe emitir Param("a"), Param("7"), Gosub("f") en ese orden.
+        // f(a, 7) debe emitir ERA(f) + Param(a) + Param(7) + Gosub(f) en ese orden.
         const string src = """
             programa t;
             vars
@@ -523,12 +530,13 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        // Los tres ultimos cuadruplos del main son: Param(a), Param(7), Gosub(f)
+        // Los cuatro ultimos cuadruplos del main son: ERA(f), Param(a), Param(7), Gosub(f)
         int n = qs.Count;
-        Assert.True(n >= 3);
+        Assert.True(n >= 4);
+        AssertQuad(qs, n - 4, QuadOp.Era,   null, null, "f");
         AssertQuad(qs, n - 3, QuadOp.Param, null, null, "a");
         AssertQuad(qs, n - 2, QuadOp.Param, null, null, "7");
-        AssertQuad(qs, n - 1, QuadOp.Gosub, null, null, "f");
+        AssertQuad(qs, n - 1, QuadOp.Gosub, "f",  null, "0");
     }
 
     // -------------------------------------------------------------------------
@@ -658,5 +666,382 @@ public class CodeGenTests
             if (q.Op is QuadOp.GotoF or QuadOp.Goto)
                 Assert.NotEqual("?", q.Result);
         }
+    }
+
+    // =========================================================================
+    //  Entrega 4 — ERA, EndFunc, StartQuad
+    // =========================================================================
+
+    // -------------------------------------------------------------------------
+    //  [PN-7b] StartQuad se registra al entrar al func_body
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void FuncionSinCuerpo_StartQuad_EsElPrimerCuadruplo()
+    {
+        // La funcion 'noop' no tiene estatutos; su cuerpo genera solo EndFunc.
+        // StartQuad debe apuntar a ese cuadruplo.
+        const string src = """
+            programa t;
+
+            nula noop () {
+            };
+
+            inicio {
+            } fin
+            """;
+        var r = PatitoFrontEnd.Compile(src, "<test>");
+        Assert.True(r.Success);
+        var fi = r.FunctionDirectory!.Lookup("noop");
+        Assert.NotNull(fi);
+        // El primer cuadruplo del programa es el EndFunc de noop (indice 0).
+        Assert.Equal(0, fi!.StartQuad);
+    }
+
+    [Fact]
+    public void FuncionConCuerpo_StartQuad_EsAntesDePrimerEstatuto()
+    {
+        // La funcion 'duplicar' tiene un Assign. StartQuad debe valer 0.
+        const string src = """
+            programa t;
+            vars
+                g: entero;
+
+            nula duplicar (x: entero) {
+                vars
+                    r: entero;
+                r = x + x;
+                escribe(r);
+            };
+
+            inicio {
+                g = 3;
+                duplicar(g);
+            } fin
+            """;
+        var r = PatitoFrontEnd.Compile(src, "<test>");
+        Assert.True(r.Success);
+        var fi = r.FunctionDirectory!.Lookup("duplicar");
+        Assert.NotNull(fi);
+        // El cuerpo de duplicar es el primer codigo que se genera (indice 0).
+        Assert.Equal(0, fi!.StartQuad);
+    }
+
+    // -------------------------------------------------------------------------
+    //  [PN-7c] EndFunc se emite al salir del func_body
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void FuncionNula_UltimoQuadDeFunc_EsEndFunc()
+    {
+        const string src = """
+            programa t;
+
+            nula saluda () {
+                escribe("hola");
+            };
+
+            inicio {
+            } fin
+            """;
+        var qs = Quads(src);
+        // Los cuadruplos del cuerpo de 'saluda' terminan con EndFunc.
+        // El EndFunc es el segundo cuadruplo (0=Print, 1=EndFunc).
+        AssertQuad(qs, 1, QuadOp.EndFunc, null, null, "saluda");
+    }
+
+    [Fact]
+    public void DosFunciones_CadaUnaTerminaConSuEndFunc()
+    {
+        const string src = """
+            programa t;
+
+            nula f1 () {
+                escribe("f1");
+            };
+
+            nula f2 () {
+                escribe("f2");
+            };
+
+            inicio {
+            } fin
+            """;
+        var qs = Quads(src);
+        // f1: Print[0], EndFunc[1]
+        // f2: Print[2], EndFunc[3]
+        AssertQuad(qs, 1, QuadOp.EndFunc, null, null, "f1");
+        AssertQuad(qs, 3, QuadOp.EndFunc, null, null, "f2");
+    }
+
+    // -------------------------------------------------------------------------
+    //  [PN-18] ERA se emite ANTES de los Param en cada llamada a funcion
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void LlamadaSinArgs_EmiteEra_LuegoGosub()
+    {
+        // Para f(): ERA(f) + Gosub(f, startQ) — sin Param
+        const string src = """
+            programa t;
+
+            nula f () {
+                escribe("ok");
+            };
+
+            inicio {
+                f();
+            } fin
+            """;
+        var qs = Quads(src);
+        // Cuadruplos del cuerpo principal:
+        //   f_body: Print[0], EndFunc[1]
+        //   main:   ERA[2], Gosub[3]
+        AssertQuad(qs, 2, QuadOp.Era,   null, null, "f");
+        AssertQuad(qs, 3, QuadOp.Gosub, "f",  null, "0");  // startQuad=0
+    }
+
+    [Fact]
+    public void LlamadaConUnArg_EmiteEra_Param_Gosub()
+    {
+        const string src = """
+            programa t;
+            vars
+                x: entero;
+
+            nula doble (n: entero) {
+                vars
+                    r: entero;
+                r = n + n;
+                escribe(r);
+            };
+
+            inicio {
+                x = 5;
+                doble(x);
+            } fin
+            """;
+        var qs = Quads(src);
+        // Cuerpo de doble: Plus[0], Assign[1], Print[2], EndFunc[3]
+        // Cuerpo principal: Assign[4], ERA[5], Param[6], Gosub[7]
+        AssertQuad(qs, 5, QuadOp.Era,   null, null, "doble");
+        AssertQuad(qs, 6, QuadOp.Param, null, null, "x");
+        AssertQuad(qs, 7, QuadOp.Gosub, "doble", null, "0");
+    }
+
+    [Fact]
+    public void LlamadaConDosArgs_EmiteEra_DosParam_Gosub()
+    {
+        const string src = """
+            programa t;
+            vars
+                a, b: entero;
+
+            nula suma (x: entero, y: entero) {
+                vars
+                    r: entero;
+                r = x + y;
+                escribe(r);
+            };
+
+            inicio {
+                a = 3;
+                b = 4;
+                suma(a, b);
+            } fin
+            """;
+        var qs = Quads(src);
+        // Cuerpo de suma: Plus[0], Assign[1], Print[2], EndFunc[3]
+        // Cuerpo principal: Assign[4](a=3), Assign[5](b=4)
+        //   ERA[6], Param[7](a), Param[8](b), Gosub[9]
+        AssertQuad(qs, 6, QuadOp.Era,   null, null, "suma");
+        AssertQuad(qs, 7, QuadOp.Param, null, null, "a");
+        AssertQuad(qs, 8, QuadOp.Param, null, null, "b");
+        AssertQuad(qs, 9, QuadOp.Gosub, "suma", null, "0");
+    }
+
+    [Fact]
+    public void DobleInvocacion_CadaLlamadaTieneEraYGosub()
+    {
+        const string src = """
+            programa t;
+            vars
+                v: entero;
+
+            nula ping () {
+                escribe("ping");
+            };
+
+            inicio {
+                v = 1;
+                ping();
+                ping();
+            } fin
+            """;
+        var qs = Quads(src);
+        // ping body: Print[0], EndFunc[1]
+        // main:      Assign[2], ERA[3], Gosub[4], ERA[5], Gosub[6]
+        AssertQuad(qs, 3, QuadOp.Era,   null, null, "ping");
+        AssertQuad(qs, 4, QuadOp.Gosub, "ping", null, "0");
+        AssertQuad(qs, 5, QuadOp.Era,   null, null, "ping");
+        AssertQuad(qs, 6, QuadOp.Gosub, "ping", null, "0");
+    }
+
+    // -------------------------------------------------------------------------
+    //  [PN-18] Gosub lleva el startQuad correcto en Result
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void Gosub_Result_EsStartQuadDeLaFuncion()
+    {
+        // El StartQuad de 'calcula' debe ser el indice del primer cuadruplo
+        // de su cuerpo, y ese mismo numero debe aparecer en el Gosub.Result.
+        const string src = """
+            programa t;
+            vars
+                x: entero;
+
+            nula calcula (n: entero) {
+                vars
+                    tmp: entero;
+                tmp = n + 1;
+                escribe(tmp);
+            };
+
+            inicio {
+                x = 7;
+                calcula(x);
+            } fin
+            """;
+        var r = PatitoFrontEnd.Compile(src, "<test>");
+        Assert.True(r.Success);
+        var fi = r.FunctionDirectory!.Lookup("calcula");
+        Assert.NotNull(fi);
+
+        var qs = r.Quads!;
+        var gosub = qs.FirstOrDefault(q => q.Op == QuadOp.Gosub);
+        Assert.NotNull(gosub);
+        Assert.Equal(fi!.StartQuad.ToString(), gosub!.Result);
+    }
+
+    // -------------------------------------------------------------------------
+    //  Condicional con GotoF + Backfill — verification end-to-end
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void Condicional_SiSino_GotoFYGotoBackfillCorrectos()
+    {
+        const string src = """
+            programa t;
+            vars
+                x: entero;
+            inicio {
+                x = 10;
+                si (x > 5) {
+                    escribe("mayor");
+                } sino {
+                    escribe("menor o igual");
+                };
+            } fin
+            """;
+        var qs = Quads(src);
+        // Quad 0: Assign x=10
+        // Quad 1: Gt x 5 t0
+        // Quad 2: GotoF t0 _ <dest>
+        // Quad 3: Print "mayor"
+        // Quad 4: Goto _ _ <dest>
+        // Quad 5: Print "menor o igual"
+        AssertQuad(qs, 2, QuadOp.GotoF, "t0", null, "5");
+        AssertQuad(qs, 4, QuadOp.Goto,  null, null, "6");
+    }
+
+    [Fact]
+    public void Condicional_SiSinSino_GotoFApuntaAlFinal()
+    {
+        const string src = """
+            programa t;
+            vars
+                n: entero;
+            inicio {
+                n = 0;
+                si (n == 0) {
+                    escribe("cero");
+                };
+            } fin
+            """;
+        var qs = Quads(src);
+        // 0: Assign n=0
+        // 1: Eq n 0 t0
+        // 2: GotoF t0 _ 4  (despues del si)
+        // 3: Print "cero"
+        AssertQuad(qs, 2, QuadOp.GotoF, "t0", null, "4");
+    }
+
+    // -------------------------------------------------------------------------
+    //  Ciclo mientras — GotoF + Goto + Backfill
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void Ciclo_GotoApuntaAlInicio_GotoFApuntaAlFinal()
+    {
+        const string src = """
+            programa t;
+            vars
+                i: entero;
+            inicio {
+                i = 0;
+                mientras (i < 3) haz {
+                    i = i + 1;
+                };
+            } fin
+            """;
+        var qs = Quads(src);
+        // 0: Assign i=0
+        // 1: Lt i 3 t0       <- inicio ciclo (index 1)
+        // 2: GotoF t0 _ 6    <- sale del ciclo
+        // 3: Plus i 1 t1
+        // 4: Assign t1 _ i
+        // 5: Goto _ _ 1      <- regresa al inicio
+        AssertQuad(qs, 1, QuadOp.Lt,    "i",  "3",  "t0");
+        AssertQuad(qs, 2, QuadOp.GotoF, "t0", null, "6");
+        AssertQuad(qs, 5, QuadOp.Goto,  null, null, "1");
+    }
+
+    // -------------------------------------------------------------------------
+    //  VirtualMemoryMap — rangos y asignacion basica
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void VirtualMemoryMap_BasesDentroDeRango()
+    {
+        Assert.Equal(18_000, Patito.Compiler.CodeGen.VirtualMemoryMap.GlobalIntBase);
+        Assert.Equal(19_000, Patito.Compiler.CodeGen.VirtualMemoryMap.GlobalFloatBase);
+        Assert.Equal(20_000, Patito.Compiler.CodeGen.VirtualMemoryMap.LocalIntBase);
+        Assert.Equal(21_000, Patito.Compiler.CodeGen.VirtualMemoryMap.LocalFloatBase);
+        Assert.Equal(22_000, Patito.Compiler.CodeGen.VirtualMemoryMap.TempIntBase);
+        Assert.Equal(23_000, Patito.Compiler.CodeGen.VirtualMemoryMap.TempFloatBase);
+        Assert.Equal(24_000, Patito.Compiler.CodeGen.VirtualMemoryMap.TempBoolBase);
+        Assert.Equal(25_000, Patito.Compiler.CodeGen.VirtualMemoryMap.ConstIntBase);
+        Assert.Equal(26_000, Patito.Compiler.CodeGen.VirtualMemoryMap.ConstFloatBase);
+        Assert.Equal(27_000, Patito.Compiler.CodeGen.VirtualMemoryMap.ConstStringBase);
+    }
+
+    [Fact]
+    public void VirtualMemoryMap_AllocatePrimeros_DanBaseDelSegmento()
+    {
+        var map = new Patito.Compiler.CodeGen.VirtualMemoryMap();
+        Assert.Equal(18_000, map.Allocate(Patito.Compiler.CodeGen.MemorySegment.GlobalInt));
+        Assert.Equal(18_001, map.Allocate(Patito.Compiler.CodeGen.MemorySegment.GlobalInt));
+        Assert.Equal(19_000, map.Allocate(Patito.Compiler.CodeGen.MemorySegment.GlobalFloat));
+    }
+
+    [Fact]
+    public void VirtualMemoryMap_SegmentOf_IdentificaSegmentoCorrecto()
+    {
+        Assert.Equal(Patito.Compiler.CodeGen.MemorySegment.GlobalInt,
+            Patito.Compiler.CodeGen.VirtualMemoryMap.SegmentOf(18_500));
+        Assert.Equal(Patito.Compiler.CodeGen.MemorySegment.TempBool,
+            Patito.Compiler.CodeGen.VirtualMemoryMap.SegmentOf(24_000));
+        Assert.Null(Patito.Compiler.CodeGen.VirtualMemoryMap.SegmentOf(1_000));
     }
 }

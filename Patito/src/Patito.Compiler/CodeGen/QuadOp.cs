@@ -15,8 +15,9 @@
 //    * GotoF:                       if !Left goto Result  (Right = null)
 //    * Goto:                        goto Result           (Left = Right = null)
 //    * Print:                       imprimir Result       (Left = Right = null)
+//    * Era:                         era Result (func)     (Left = Right = null)
 //    * Param:                       param Result          (Left = Right = null)
-//    * Gosub:                       gosub Result          (Left = Right = null)
+//    * Gosub:                       gosub Left Result     (Left=func, Right=null, Result=startQuad)
 //    * EndFunc:                     endfunc               (todos null / nombre en Result)
 // =============================================================================
 
@@ -53,9 +54,10 @@ public enum QuadOp
     Print,
 
     // --- Funciones ---
-    Param,
-    Gosub,
-    EndFunc,
+    Era,       // Espacio de Registro de Activacion: reserva memoria para la funcion
+    Param,     // Pasa un argumento a la funcion que se va a llamar
+    Gosub,     // Transfiere el control a la funcion (Left=nombre, Result=startQuad)
+    EndFunc,   // Marca el fin del cuerpo de una funcion
 }
 
 public static class QuadOps
@@ -76,6 +78,7 @@ public static class QuadOps
         QuadOp.GotoF   => "GotoF",
         QuadOp.Goto    => "Goto",
         QuadOp.Print   => "Print",
+        QuadOp.Era     => "ERA",
         QuadOp.Param   => "Param",
         QuadOp.Gosub   => "Gosub",
         QuadOp.EndFunc => "EndFunc",

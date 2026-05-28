@@ -132,6 +132,8 @@ process_file() {
           color="$YELLOW"
         elif [[ "$line" =~ Print ]]; then
           color="$GREEN"
+        elif [[ "$line" =~ ERA|EndFunc ]]; then
+          color="$BOLD"
         elif [[ "$line" =~ Param|Gosub ]]; then
           color="$CYAN"
         fi

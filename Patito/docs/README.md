@@ -32,11 +32,12 @@ Esta carpeta contiene toda la documentación técnica del proyecto. Cada archivo
 | [`directorio_y_tablas.md`](directorio_y_tablas.md)                | Descripción de las estructuras que representan el Directorio de Funciones y las Tablas de Variables: campos, operaciones y ejemplo concreto de poblado a partir de código fuente. |
 | [`puntos_neuralgicos.md`](puntos_neuralgicos.md)                  | Recorrido del árbol con ANTLR4: mapeo de cada `Enter…`/`Exit…` del listener a su acción semántica (PN-1 a PN-7, Entrega 2) y a su acción de generación de cuádruplos (PN-8 a PN-18, Entrega 3). |
 
-### Generación de código intermedio (Entrega 3)
+### Generación de código intermedio (Entregas 3 y 4)
 
-| Documento                                      | Contenido                                                                                                                                                              |
-|------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`cuadruplos.md`](cuadruplos.md)               | Algoritmo completo de traducción a cuádruplos: formato `Quadruple`/`QuadOp`, algoritmos PN-8 a PN-18 con pseudocódigo y trazas de pilas, mecanismo de Backfill, y fila de cuádruplos generada para cuatro programas de prueba. |
+| Documento                                              | Contenido                                                                                                                                                              |
+|--------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`cuadruplos.md`](cuadruplos.md)                       | Algoritmo completo de traducción a cuádruplos: formato `Quadruple`/`QuadOp`, algoritmos PN-8 a PN-18 con pseudocódigo y trazas de pilas, mecanismo de Backfill, ERA/EndFunc y ejemplos para cinco programas. |
+| [`direcciones_virtuales.md`](direcciones_virtuales.md) | Distribución de Direcciones Virtuales: mapa de memoria con diez segmentos iniciando en 18 000, API de `VirtualMemoryMap` y adelanto de la traducción en Entrega 5.     |
 
 ### Calidad y verificación
 
@@ -54,6 +55,7 @@ Si lo que buscas es el material que corresponde a una **entrega específica**, e
 | **Entrega 1** — Léxico y sintaxis          | [`herramientas.md`](herramientas.md), [`lexico.md`](lexico.md), [`gramatica.md`](gramatica.md) (secciones de ANTLR4), [`pruebas.md`](pruebas.md).                  |
 | **Entrega 2** — Análisis semántico         | [`cubo_semantico.md`](cubo_semantico.md), [`estructuras.md`](estructuras.md) (§ Entrega 2), [`directorio_y_tablas.md`](directorio_y_tablas.md), [`puntos_neuralgicos.md`](puntos_neuralgicos.md) (§ Entregas 2), [`pruebas.md`](pruebas.md). |
 | **Entrega 3** — Generación de cuádruplos  | [`cuadruplos.md`](cuadruplos.md), [`estructuras.md`](estructuras.md) (§ Entrega 3), [`puntos_neuralgicos.md`](puntos_neuralgicos.md) (§ Entrega 3), [`pruebas.md`](pruebas.md) (§ `CodeGenTests`). |
+| **Entrega 4** — Funciones completas       | [`cuadruplos.md`](cuadruplos.md) (§ Entrega 4), [`puntos_neuralgicos.md`](puntos_neuralgicos.md) (§ Entrega 4), [`direcciones_virtuales.md`](direcciones_virtuales.md), [`pruebas.md`](pruebas.md). |
 
 ## Convenciones
 

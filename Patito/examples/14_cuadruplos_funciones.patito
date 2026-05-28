@@ -1,0 +1,51 @@
+// =============================================================================
+//  14_cuadruplos_funciones.patito
+//  Ejemplo positivo — Entrega 4: Cuadruplos para declaracion e invocacion
+//  de funciones con la secuencia ERA + Param + Gosub + EndFunc.
+//
+//  Demuestra:
+//    * Declaracion de funcion nula con parametros (cuerpo genera cuadruplos
+//      de su logica interna + EndFunc al final)
+//    * Llamada desde el cuerpo principal:
+//        ERA  _  _  sumar
+//        Param  _  _  a
+//        Param  _  _  b
+//        Gosub  sumar  _  <startQuad>
+//    * Funcion con ciclo interno
+//    * Multiples llamadas a la misma funcion
+// =============================================================================
+
+programa funciones;
+vars
+    a, b, n: entero;
+
+nula imprimirHasta (limite: entero) {
+    vars
+        k: entero;
+    k = 0;
+    mientras (k < limite) haz {
+        escribe("k =", k);
+        k = k + 1;
+    };
+};
+
+nula doble (x: entero) {
+    vars
+        resultado: entero;
+    resultado = x + x;
+    escribe("doble:", resultado);
+};
+
+inicio {
+    // Primera invocacion: ERA + Param + Gosub
+    n = 3;
+    imprimirHasta(n);
+
+    // Segunda invocacion
+    a = 5;
+    doble(a);
+
+    // Tercera invocacion con constante directa
+    b = 2;
+    doble(b);
+} fin
