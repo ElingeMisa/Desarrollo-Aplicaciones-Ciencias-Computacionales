@@ -46,6 +46,20 @@
 //      [PN-7c] ExitFunc_body      : emite EndFunc al cerrar el cuerpo.
 //      [PN-18] ExitCall_stmt      : actualizado para emitir ERA antes de Param,
 //                                   y pasar startQuad como Result del Gosub.
+//
+//  Puntos neuralgicos implementados en Entrega 5 (direcciones virtuales):
+//
+//      [PN-2]  ProcessVars (ampliado) : asigna direccion virtual a cada
+//                                       variable al declararla (Symbol.Address).
+//      [PN-3]  ProcessFuncs (ampliado): asigna direcciones a params y locales
+//                                       de funcion (segmento Local).
+//      [PN-7b] EnterFunc_body (amp.) : reinicia contadores de temporales para
+//                                       que cada funcion reutilice las mismas
+//                                       direcciones del segmento Temp.
+//      [PN-8]  ExitFactorSimple (amp.): registra la constante en el pool para
+//                                       que obtenga (y deduplique) su direccion.
+//      [PN-13] ExitImp (ampliado)    : registra literales de cadena (LETRERO)
+//                                       en el segmento Const-Cadena.
 // =============================================================================
 
 using System.Collections.Generic;
@@ -97,7 +111,7 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
 
         var varsCtx = ctx.vars();
         if (varsCtx is not null)
-            ProcessVars(varsCtx, _directory.GlobalTable);
+            ProcessVars(varsCtx, _directory.GlobalTable, isGlobal: true);
 
         var funcsCtx = ctx.funcs();
         if (funcsCtx is not null)
@@ -106,8 +120,10 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
 
     // ==========================================================================
     //  [PN-2] ProcessVars: registra cada ID en la tabla con validacion.
+    //  [Entrega 5] Propaga isGlobal para que DeclareVariable asigne la
+    //  direccion virtual correcta (segmento Global o Local segun el alcance).
     // ==========================================================================
-    private void ProcessVars(PatitoParser.VarsContext varsCtx, VariableTable table)
+    private void ProcessVars(PatitoParser.VarsContext varsCtx, VariableTable table, bool isGlobal)
     {
         var listado = varsCtx.listado_vars();
         if (listado is null) return;
@@ -120,16 +136,24 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         {
             var tipo = ParseTipo(tipos[g]);
             foreach (var idNode in grupos[g].ID())
-                DeclareVariable(table, idNode, tipo, SymbolKind.Variable);
+                DeclareVariable(table, idNode, tipo, SymbolKind.Variable, isGlobal);
         }
     }
 
-    private void DeclareVariable(VariableTable table, ITerminalNode idNode, SemanticType type, SymbolKind kind)
+    // [Entrega 5] DeclareVariable asigna una direccion virtual al simbolo y la
+    // registra en el AddressBook del emitter para poder mostrar DIR(NOMBRE).
+    private void DeclareVariable(VariableTable table, ITerminalNode idNode,
+                                  SemanticType type, SymbolKind kind, bool isGlobal)
     {
         var name = idNode.GetText();
         int line = idNode.Symbol.Line;
         int col  = idNode.Symbol.Column + 1;
-        var sym  = new Symbol(name, type, kind, line, col);
+
+        // Asignar direccion virtual antes de crear el simbolo
+        int addr = _emitter.AllocateVariable(type, isGlobal);
+        _emitter.RegisterAddress(name, addr);
+
+        var sym = new Symbol(name, type, kind, line, col, addr);
 
         if (!table.TryDeclare(sym))
         {
@@ -190,7 +214,7 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
                     {
                         var pType = ParseTipo(ts[p]);
                         info.ParameterTypes.Add(pType);
-                        DeclareVariable(info.LocalTable, ids[p], pType, SymbolKind.Parameter);
+                        DeclareVariable(info.LocalTable, ids[p], pType, SymbolKind.Parameter, isGlobal: false);
                     }
                 }
             }
@@ -200,7 +224,7 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
 
             var localVars = bodyCtx.vars();
             if (localVars is not null)
-                ProcessVars(localVars, info.LocalTable);
+                ProcessVars(localVars, info.LocalTable, isGlobal: false);
         }
     }
 
@@ -216,6 +240,10 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
     {
         if (_funcByBody.TryGetValue(ctx, out var info))
         {
+            // [PN-7b'] Reiniciar contadores de temporales: cada funcion reutiliza
+            //          las mismas direcciones del segmento Temp en su activacion.
+            _emitter.ResetTemps();
+
             // [PN-7b] Guardar el indice del primer cuadruplo del cuerpo.
             info.StartQuad = _emitter.Fila.Count;
             _scopeStack.Push(info);
@@ -333,7 +361,7 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
             if (atom.ID() is not null)
             {
                 // Variable con signo negativo: emitir t = 0 - var
-                var temp = _emitter.NewTemp();
+                var temp = _emitter.NewTemp(type);   // [E5] pasa el tipo para asignar dir
                 _emitter.Fila.Emit(QuadOp.Neg, null, name, temp);
                 name = temp;
             }
@@ -342,6 +370,13 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
                 name = "-" + name;
             }
         }
+
+        // [Entrega 5] Registrar constante numerica en el pool de direcciones.
+        // Solo aplica a constantes (atom.ID() is null); las variables ya fueron
+        // registradas en DeclareVariable, y los temporales de negacion se
+        // registraron en NewTemp(type). Tambien cubre el caso negativo ("-42").
+        if (atom.ID() is null)
+            _emitter.AllocateConstant(name, type);
 
         _emitter.PushOperand(name, type);
     }
@@ -539,7 +574,10 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
     {
         if (ctx.LETRERO() is not null)
         {
-            _emitter.Fila.Emit(QuadOp.Print, null, null, ctx.LETRERO().GetText());
+            var literal = ctx.LETRERO().GetText();
+            // [Entrega 5] Registrar la cadena literal en el segmento Const-Cadena.
+            _emitter.AllocateStringConst(literal);
+            _emitter.Fila.Emit(QuadOp.Print, null, null, literal);
         }
         else
         {

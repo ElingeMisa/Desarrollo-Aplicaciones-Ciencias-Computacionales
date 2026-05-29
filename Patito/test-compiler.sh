@@ -1,10 +1,17 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # =========================================================
 # PATITO TEST RUNNER
 # =========================================================
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 Project_Ruta="tests/Patito.Tests/Patito.Tests.csproj"
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+LOG_DIR="$SCRIPT_DIR/logs"
+mkdir -p "$LOG_DIR"
+LOGFILE="$LOG_DIR/$(date +%Y%m%d-%H%M%S)-test-compiler.log"
+exec > >(tee -a "$LOGFILE") 2>&1
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'

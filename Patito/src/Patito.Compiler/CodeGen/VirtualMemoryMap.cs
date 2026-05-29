@@ -184,6 +184,21 @@ public sealed class VirtualMemoryMap
             _counters[i] = 0;
     }
 
+    /// <summary>
+    /// Restablece solo los contadores de los segmentos temporales
+    /// (TempInt, TempFloat, TempBool). Se llama al entrar al cuerpo de cada
+    /// funcion, ya que los temporales de cada funcion viven en su propio
+    /// registro de activacion y pueden reutilizar las mismas direcciones.
+    /// Las variables locales NO se reinician aqui porque sus direcciones ya
+    /// fueron asignadas durante la fase de declaracion.
+    /// </summary>
+    public void ResetTemps()
+    {
+        _counters[(int)MemorySegment.TempInt]   = 0;
+        _counters[(int)MemorySegment.TempFloat] = 0;
+        _counters[(int)MemorySegment.TempBool]  = 0;
+    }
+
     // =========================================================================
     //  Representacion imprimible (para debug y documentacion)
     // =========================================================================

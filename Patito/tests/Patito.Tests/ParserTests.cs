@@ -406,7 +406,7 @@ public class ParserTests
         const string src = """
             programa demo;
             vars
-                x: entero;
+                x: flotante;
             inicio {
                 x = ((2 + 3) * (4 - 1)) / 5;
                 escribe(x);

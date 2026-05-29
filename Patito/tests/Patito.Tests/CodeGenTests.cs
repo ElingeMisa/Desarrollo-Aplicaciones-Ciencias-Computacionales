@@ -81,7 +81,7 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        Assert.Equal(1, qs.Count);
+        Assert.Single(qs);
         AssertQuad(qs, 0, QuadOp.Assign, "42", null, "x");
     }
 
@@ -98,7 +98,7 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        Assert.Equal(1, qs.Count);
+        Assert.Single(qs);
         AssertQuad(qs, 0, QuadOp.Assign, "3.14", null, "pi");
     }
 
@@ -322,7 +322,7 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        Assert.Equal(1, qs.Count);
+        Assert.Single(qs);
         AssertQuad(qs, 0, QuadOp.Print, null, null, "\"hola mundo\"");
     }
 
@@ -558,12 +558,13 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        Assert.Equal(5, qs.Count);
+        Assert.Equal(6, qs.Count);
         AssertQuad(qs, 0, QuadOp.Assign, "1",     null, "a");
         AssertQuad(qs, 1, QuadOp.Assign, "2",     null, "b");
         AssertQuad(qs, 2, QuadOp.Plus,   "a",     "b",  "t0");
         AssertQuad(qs, 3, QuadOp.Assign, "t0",    null, "c");
         AssertQuad(qs, 4, QuadOp.Print,  null,    null, "\"suma:\"");
+        AssertQuad(qs, 5, QuadOp.Print,  null,    null, "c");
     }
 
     [Fact]

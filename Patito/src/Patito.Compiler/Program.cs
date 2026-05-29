@@ -97,8 +97,8 @@ public static class Program
     {
         Console.WriteLine();
         Console.WriteLine("=== Fila de Cuadruplos ===");
-        Console.WriteLine($"{"#",4}  {"Op",-8}  {"Left",-12}  {"Right",-12}  Result");
-        Console.WriteLine(new string('-', 60));
+        Console.WriteLine($"{"#",4}  {"Op",-8}  {"Left",-22}  {"Right",-22}  Result");
+        Console.WriteLine(new string('-', 76));
 
         var quads = result.Quads;
         if (quads is null || quads.Count == 0)
@@ -107,8 +107,11 @@ public static class Program
         }
         else
         {
+            var book = result.AddressBook;
             foreach (var q in quads)
-                Console.WriteLine(q.ToString());
+                Console.WriteLine(book is not null && book.Count > 0
+                    ? q.Format(book)
+                    : q.ToString());
         }
         Console.WriteLine();
     }

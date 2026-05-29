@@ -15,18 +15,20 @@
 
 set -euo pipefail
 
-# ── Colores ──────────────────────────────────────────────────────────────────
-if [ -t 1 ]; then
-  BOLD="\033[1m"; CYAN="\033[1;36m"; GREEN="\033[1;32m"; RED="\033[1;31m"
-  YELLOW="\033[1;33m"; DIM="\033[2m"; RESET="\033[0m"
-else
-  BOLD="" CYAN="" GREEN="" RED="" YELLOW="" DIM="" RESET=""
-fi
+# ── Colores (siempre activos para que el log preserve el formato) ─────────────
+BOLD="\033[1m"; CYAN="\033[1;36m"; GREEN="\033[1;32m"; RED="\033[1;31m"
+YELLOW="\033[1;33m"; DIM="\033[2m"; RESET="\033[0m"
 
 # ── Rutas ────────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPILER_PROJECT="$SCRIPT_DIR/src/Patito.Compiler/Patito.Compiler.csproj"
 EXAMPLES_DIR="$SCRIPT_DIR/examples"
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+LOG_DIR="$SCRIPT_DIR/logs"
+mkdir -p "$LOG_DIR"
+LOGFILE="$LOG_DIR/$(date +%Y%m%d-%H%M%S)-compile-examples.log"
+exec > >(tee -a "$LOGFILE") 2>&1
 
 MODE="${1:---valid}"
 

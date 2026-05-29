@@ -1,7 +1,15 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 EXE="src/Patito.Compiler/bin/Debug/net10.0/patitoc"
 
-GREEN='\033[32m'; 
-RED='\033[31m'; 
+# ── Logs ─────────────────────────────────────────────────────────────────────
+LOG_DIR="$SCRIPT_DIR/logs"
+mkdir -p "$LOG_DIR"
+LOGFILE="$LOG_DIR/$(date +%Y%m%d-%H%M%S)-test-samples.log"
+exec > >(tee -a "$LOGFILE") 2>&1
+
+GREEN='\033[32m';
+RED='\033[31m';
 NC='\033[0m' # No Color
 
 if [[ ! -x "$EXE" ]]; then

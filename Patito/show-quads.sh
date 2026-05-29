@@ -14,22 +14,27 @@
 
 set -euo pipefail
 
-# ── Colores (desactivar si no hay TTY) ──────────────────────────────────────
-if [ -t 1 ]; then
-  BOLD="\033[1m"
-  CYAN="\033[1;36m"
-  GREEN="\033[1;32m"
-  YELLOW="\033[1;33m"
-  RED="\033[1;31m"
-  DIM="\033[2m"
-  RESET="\033[0m"
-else
-  BOLD="" CYAN="" GREEN="" YELLOW="" RED="" DIM="" RESET=""
-fi
+# ── Colores (siempre activos para que el log preserve el formato) ─────────────
+BOLD="\033[1m"
+CYAN="\033[1;36m"
+GREEN="\033[1;32m"
+YELLOW="\033[1;33m"
+RED="\033[1;31m"
+DIM="\033[2m"
+RESET="\033[0m"
 
 # ── Rutas ────────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPILER_PROJECT="$SCRIPT_DIR/src/Patito.Compiler/Patito.Compiler.csproj"
+
+# Logs: guarda la salida del script en el directorio de logs con formato YYYYMMDD-HHMMSS-show-quads.log
+LOG_DIR="$SCRIPT_DIR/logs"
+mkdir -p "$LOG_DIR"
+TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
+LOGFILE="$LOG_DIR/${TIMESTAMP}-show-quads.log"
+
+# Redirige toda la salida (stdout y stderr) al logfile, pero también la muestra en pantalla
+exec > >(tee -a "$LOGFILE") 2>&1
 
 # Compilar el proyecto si aun no esta compilado (build silencioso)
 echo -e "${DIM}[build] Compilando el proyecto...${RESET}"
@@ -128,13 +133,13 @@ process_file() {
       else
         # Linea de cuadruplo — resaltar segun la operacion
         local color="$RESET"
-        if [[ "$line" =~ GotoF|Goto ]]; then
+        if [[ "$line" =~ (GotoF|Goto) ]]; then
           color="$YELLOW"
         elif [[ "$line" =~ Print ]]; then
           color="$GREEN"
-        elif [[ "$line" =~ ERA|EndFunc ]]; then
+        elif [[ "$line" =~ (ERA|EndFunc) ]]; then
           color="$BOLD"
-        elif [[ "$line" =~ Param|Gosub ]]; then
+        elif [[ "$line" =~ (Param|Gosub) ]]; then
           color="$CYAN"
         fi
         echo -e "  ${color}$line${RESET}"

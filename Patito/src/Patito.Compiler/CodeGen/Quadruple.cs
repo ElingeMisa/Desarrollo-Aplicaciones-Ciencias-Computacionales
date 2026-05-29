@@ -22,6 +22,8 @@
 //  emitido (la ficha se puede reemplazar con Backfill solo en el campo Result).
 // =============================================================================
 
+using System.Collections.Generic;
+
 namespace Patito.Compiler.CodeGen;
 
 /// <summary>
@@ -30,10 +32,33 @@ namespace Patito.Compiler.CodeGen;
 /// </summary>
 public sealed record Quadruple(int Index, QuadOp Op, string? Left, string? Right, string Result)
 {
+    /// <summary>
+    /// Representacion compacta con nombres planos (sin direccion). Usada
+    /// internamente y en los tests unitarios.
+    /// </summary>
     public override string ToString()
     {
         var l = Left   ?? "_";
         var r = Right  ?? "_";
         return $"{Index,4}  {Op.ToSymbol(),-8}  {l,-12}  {r,-12}  {Result}";
+    }
+
+    /// <summary>
+    /// Representacion con direcciones virtuales en el formato
+    ///   <c>OPERACION  DIR(NOMBRE)  DIR(NOMBRE)  DIR(NOMBRE)</c>
+    /// Si un operando no tiene direccion asignada (nombre de funcion, indice
+    /// de salto, etc.) se muestra solo el nombre sin prefijo de direccion.
+    /// </summary>
+    public string Format(IReadOnlyDictionary<string, int> addressBook)
+    {
+        static string Fmt(string? s, IReadOnlyDictionary<string, int> book)
+        {
+            if (s is null) return "_";
+            return book.TryGetValue(s, out int addr) ? $"{addr}({s})" : s;
+        }
+        var l   = Fmt(Left,   addressBook);
+        var r   = Fmt(Right,  addressBook);
+        var res = Fmt(Result, addressBook);
+        return $"{Index,4}  {Op.ToSymbol(),-8}  {l,-22}  {r,-22}  {res}";
     }
 }

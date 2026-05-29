@@ -1,0 +1,1 @@
+Este es un archivo de texto porque los demas logs son ignorados por el .gitignore, entonces ocupamos un archivo para que no este vacio.

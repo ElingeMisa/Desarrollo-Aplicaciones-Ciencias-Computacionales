@@ -77,7 +77,7 @@ public class QuadruplesDemoTests
             _out.WriteLine("");
 
             // Hacemos fallar el test para que se note en el runner.
-            Assert.True(false, $"El programa '{label}' no compilo correctamente.");
+            Assert.Fail($"El programa '{label}' no compilo correctamente.");
             return;
         }
 

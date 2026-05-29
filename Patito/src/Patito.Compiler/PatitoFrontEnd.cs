@@ -43,6 +43,15 @@ public sealed record CompileResult(
     /// Null si el parser fallo.
     /// </summary>
     public FunctionDirectory? FunctionDirectory => Semantic?.Directory;
+
+    /// <summary>
+    /// Libro de direcciones (Entrega 5): mapea cada nombre de operando
+    /// (variable, constante o temporal) a su direccion virtual asignada.
+    /// Se usa para imprimir cuadruplos en formato  DIR(NOMBRE).
+    /// Null si el parser fallo o no se llego a la fase semantica.
+    /// </summary>
+    public IReadOnlyDictionary<string, int>? AddressBook =>
+        Semantic?.Emitter.AddressBook;
 }
 
 /// <summary>

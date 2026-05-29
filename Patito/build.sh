@@ -7,22 +7,28 @@
 #    ./build.sh              # compila ambos proyectos
 #    ./build.sh --compiler   # solo el compilador
 #    ./build.sh --tests      # solo las pruebas
+# Salida -> Guarda la salida del scrip en el direcctorio de logs, con el formato YYYYMMDD-HHMMSS-build.log
 # =============================================================================
 
 set -euo pipefail
 
-# ── Colores ──────────────────────────────────────────────────────────────────
-if [ -t 1 ]; then
-  BOLD="\033[1m"; CYAN="\033[1;36m"; GREEN="\033[1;32m"
-  RED="\033[1;31m"; DIM="\033[2m"; RESET="\033[0m"
-else
-  BOLD="" CYAN="" GREEN="" RED="" DIM="" RESET=""
-fi
+# ── Colores (siempre activos para que el log preserve el formato) ─────────────
+BOLD="\033[1m"; CYAN="\033[1;36m"; GREEN="\033[1;32m"
+RED="\033[1;31m"; DIM="\033[2m"; RESET="\033[0m"
 
 # ── Rutas ────────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPILER_PROJECT="$SCRIPT_DIR/src/Patito.Compiler/Patito.Compiler.csproj"
 TESTS_PROJECT="$SCRIPT_DIR/tests/Patito.Tests/Patito.Tests.csproj"
+
+# Logs: guarda la salida del script en el directorio de logs con formato YYYYMMDD-HHMMSS-build.log
+LOG_DIR="$SCRIPT_DIR/logs"
+mkdir -p "$LOG_DIR"
+TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
+LOGFILE="$LOG_DIR/${TIMESTAMP}-build.log"
+
+# Redirige toda la salida (stdout y stderr) al logfile, pero también la muestra en pantalla
+exec > >(tee -a "$LOGFILE") 2>&1
 
 MODE="${1:---all}"
 

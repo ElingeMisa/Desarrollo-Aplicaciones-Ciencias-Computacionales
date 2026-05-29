@@ -13,17 +13,15 @@
 #  Uso:
 #    ./run-all.sh           # ejecuta las 4 fases
 #    ./run-all.sh --no-demo # omite la fase de demo de cuadruplos (más rápido)
+# Salida :
+#   este script se ejecuta y guarda la salida del run completo en el archivo run-all.log en la carpeta de logs
 # =============================================================================
 
 set -euo pipefail
 
-# ── Colores ──────────────────────────────────────────────────────────────────
-if [ -t 1 ]; then
-  BOLD="\033[1m"; CYAN="\033[1;36m"; GREEN="\033[1;32m"; RED="\033[1;31m"
-  YELLOW="\033[1;33m"; DIM="\033[2m"; RESET="\033[0m"
-else
-  BOLD="" CYAN="" GREEN="" RED="" YELLOW="" DIM="" RESET=""
-fi
+# ── Colores (siempre activos para que el log preserve el formato) ─────────────
+BOLD="\033[1m"; CYAN="\033[1;36m"; GREEN="\033[1;32m"; RED="\033[1;31m"
+YELLOW="\033[1;33m"; DIM="\033[2m"; RESET="\033[0m"
 
 # ── Rutas ────────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -32,6 +30,16 @@ TESTS_PROJECT="$SCRIPT_DIR/tests/Patito.Tests/Patito.Tests.csproj"
 
 SKIP_DEMO=false
 [ "${1:-}" = "--no-demo" ] && SKIP_DEMO=true
+
+
+# Logs: guarda la salida del script en el directorio de logs con formato YYYYMMDD-HHMMSS-run-all.log
+LOG_DIR="$SCRIPT_DIR/logs"
+mkdir -p "$LOG_DIR"
+TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
+LOGFILE="$LOG_DIR/${TIMESTAMP}-run-all.log"
+
+# Redirige toda la salida (stdout y stderr) al logfile, pero también la muestra en pantalla
+exec > >(tee -a "$LOGFILE") 2>&1
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 PHASE_ERRORS=()

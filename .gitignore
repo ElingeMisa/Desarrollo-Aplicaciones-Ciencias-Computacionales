@@ -43,11 +43,12 @@
 /**/**/**/bin
 /**/**/**/obj
 /**/**/**/.antlr
-
+/**/**/**/.log
+Patito/logs/*.log
 # Visual Studio Code
 .vscode/
-/tarea-1/EstructurasDatos/bin
-/tarea-1/EstructurasDatos/obj
+/*/*/bin
+/*/*/obj
 
 # Zip files
 *.zip
