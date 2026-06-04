@@ -333,6 +333,34 @@ dotnet test --filter "FullyQualifiedName!~QuadruplesDemoTests"
 ./run-all.sh
 ```
 
+---
+
+## Test Cases de la VM (TC-VM-01 a TC-VM-07)
+
+Ubicados en [`VirtualMachineTests.cs`](../tests/Patito.Tests/VirtualMachineTests.cs).  
+El helper `Run(source)` compila y ejecuta la VM; los tests verifican `VmResult.Output`.
+
+| ID | Nombre | Código fuente Patito | Cuádruplos clave | Output esperado | Resultado |
+|----|--------|----------------------|-----------------|-----------------|-----------|
+| TC-VM-01 | Print de constante entera | `escribe(42);` | `Print _ _ 42` | `42` | ✅ |
+| TC-VM-02 | Asignación y print de variable | `x = 10; escribe(x);` | `Assign 10 _ x`, `Print _ _ x` | `10` | ✅ |
+| TC-VM-03 | Condicional si/sino | `si (x > 5) { escribe("mayor"); } sino { escribe("menor o igual"); };` | `Gt x 5 t0`, `GotoF t0 _ ?`, `Print _ _ "mayor"`, `Goto _ _ ?`, `Print _ _ "menor o igual"` | `mayor` (x=7), `menor o igual` (x=3) | ✅ |
+| TC-VM-04 | Ciclo mientras/haz | `mientras (i < 4) haz { escribe(i); i = i + 1; };` | `Lt i 4 t0`, `GotoF t0`, `Print _ _ i`, `Plus i 1 t1`, `Assign t1 _ i`, `Goto _ _ startLoop` | `0`, `1`, `2`, `3` | ✅ |
+| TC-VM-05 | Función void con parámetros | `nula imprimir(n: entero)` llamada con `a=99` y literal `7` | `ERA imprimir`, `Param _ _ a`, `Gosub imprimir startQ`, `EndFunc` | `valor:`, `99`, `valor:`, `7` | ✅ |
+| TC-VM-06 | Función con retorno vía global | `nula cuadrado(base: entero)` escribe `retval = base * base` | `Times base base t0`, `Assign t0 _ retval` | `36` (x=6), `9` (x=3) | ✅ |
+| TC-VM-07 | Aritmética mixta ent+flot | `a + b`, `a * b`, `f + 1.5` | `Plus a b t0`, `Times a b t1`, `Plus f 1.5 t2` | `13`, `30`, `4` | ✅ |
+
+### Notas de implementación
+
+- **TC-VM-01/02**: verifica que `BuildConstValues()` convierte `"42"` en el entero `42` y lo carga en `_globalMemory[25000]`.
+- **TC-VM-03**: ejercita `GotoF` (salto condicional) y `Goto` (salto incondicional del si-body antes del sino).
+- **TC-VM-04**: ejercita el loop `GotoF` → body → `Goto` → re-evaluar condición.
+- **TC-VM-05**: ejercita el protocolo ERA → Param → Gosub → EndFunc. El valor del parámetro se copia al `LocalMemory` del frame.
+- **TC-VM-06**: la función `cuadrado` escribe en la variable global `retval` porque no está sombreada por ninguna local. El llamador luego lee `retval` del scope global.
+- **TC-VM-07**: la promoción int→double ocurre automáticamente en los helpers `ArithAdd`, `ArithMul`. `4.0.ToString(InvariantCulture)` produce `"4"`.
+
+---
+
 ## Resumen de fallos esperados
 
 Los archivos en `examples/` con prefijo `invalido_` están diseñados para fallar en distintas etapas del pipeline:

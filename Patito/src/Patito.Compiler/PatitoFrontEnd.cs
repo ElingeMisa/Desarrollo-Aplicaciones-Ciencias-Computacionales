@@ -52,6 +52,15 @@ public sealed record CompileResult(
     /// </summary>
     public IReadOnlyDictionary<string, int>? AddressBook =>
         Semantic?.Emitter.AddressBook;
+
+    /// <summary>
+    /// Valores reales de las constantes (Entrega 5 — VM): mapea cada
+    /// direccion virtual de constante a su valor concreto (int, double o string).
+    /// La VM lo usa para pre-cargar la memoria antes de ejecutar.
+    /// Null si el parser fallo o no se llego a la fase semantica.
+    /// </summary>
+    public IReadOnlyDictionary<int, object>? ConstValues =>
+        Semantic?.Emitter.BuildConstValues();
 }
 
 /// <summary>

@@ -436,6 +436,122 @@ public class QuadruplesDemoTests
     }
 
     // =========================================================================
+    //  12 - Cuadruplos de funciones (ERA/Param/Gosub) con direcciones virtuales
+    // =========================================================================
+    [Fact(DisplayName = "12 · ERA/Param/Gosub — operandos con direcciones virtuales correctas")]
+    public void Demo_12_EraParamGosubConDirecciones()
+    {
+        // Este test verifica que en los cuadruplos ERA/Param/Gosub los operandos
+        // llevan las direcciones virtuales correctas (seg. Local para params).
+        const string src = """
+            programa dirfuncs;
+            vars
+                a, b: entero;
+
+            nula suma (x: entero, y: entero) {
+                vars
+                    r: entero;
+                r = x + y;
+                escribe(r);
+            };
+
+            inicio {
+                a = 3;
+                b = 4;
+                suma(a, b);
+            } fin
+            """;
+
+        var result = PatitoFrontEnd.Compile(src, "12_era_param_gosub");
+
+        Assert.True(result.Success,
+            string.Join("; ", result.SemanticErrors));
+
+        var quads      = result.Quads!;
+        var addrBook   = result.AddressBook!;
+        var funcDir    = result.FunctionDirectory!;
+
+        // --- Imprimir cuadruplos con formato DIR(NOMBRE) ---
+        PrintBanner("12_era_param_gosub");
+        _out.WriteLine("");
+        _out.WriteLine("  --- Cuadruplos con direcciones virtuales ---");
+        _out.WriteLine($"  {"#",4}  {"Op",-8}  {"Left",-22}  {"Right",-22}  Result");
+        _out.WriteLine($"  {new string('-', 74)}");
+        foreach (var q in quads)
+            _out.WriteLine($"  {q.Format(addrBook)}");
+        _out.WriteLine("");
+
+        // --- Verificaciones sobre ERA/Param/Gosub ---
+        var eraQuads   = quads.Where(q => q.Op == QuadOp.Era).ToList();
+        var paramQuads = quads.Where(q => q.Op == QuadOp.Param).ToList();
+        var gosubQuads = quads.Where(q => q.Op == QuadOp.Gosub).ToList();
+
+        // Debe haber exactamente 1 ERA, 2 Param, 1 Gosub para la funcion "suma"
+        Assert.Single(eraQuads);
+        Assert.Equal(2, paramQuads.Count);
+        Assert.Single(gosubQuads);
+
+        // ERA debe nombrar la funcion en Result
+        Assert.Equal("suma", eraQuads[0].Result);
+
+        // Param[0] = "a" y Param[1] = "b" (los argumentos reales)
+        Assert.Equal("a", paramQuads[0].Result);
+        Assert.Equal("b", paramQuads[1].Result);
+
+        // Ambos argumentos deben tener direccion virtual en el libro
+        Assert.True(addrBook.ContainsKey("a"), "'a' debe estar en el libro de direcciones");
+        Assert.True(addrBook.ContainsKey("b"), "'b' debe estar en el libro de direcciones");
+
+        // Los parametros formales "x" e "y" deben tener dir. en seg. Local (20000-21999)
+        Assert.True(addrBook.ContainsKey("x"), "'x' debe estar en el libro de direcciones");
+        Assert.True(addrBook.ContainsKey("y"), "'y' debe estar en el libro de direcciones");
+        Assert.True(addrBook["x"] >= 20_000 && addrBook["x"] <= 21_999,
+            $"Param 'x' debe estar en segmento Local (era {addrBook["x"]})");
+        Assert.True(addrBook["y"] >= 20_000 && addrBook["y"] <= 21_999,
+            $"Param 'y' debe estar en segmento Local (era {addrBook["y"]})");
+
+        // Gosub debe apuntar al StartQuad de "suma"
+        var sumaInfo = funcDir.Lookup("suma");
+        Assert.NotNull(sumaInfo);
+        Assert.Equal(sumaInfo!.StartQuad.ToString(), gosubQuads[0].Result);
+
+        _out.WriteLine($"  'a' → dir {addrBook["a"]}  |  'b' → dir {addrBook["b"]}");
+        _out.WriteLine($"  'x' → dir {addrBook["x"]}  |  'y' → dir {addrBook["y"]}");
+        _out.WriteLine($"  suma.StartQuad = {sumaInfo.StartQuad}");
+        _out.WriteLine("");
+    }
+
+    // =========================================================================
+    //  13 - Demo ejemplo 15: maquina virtual completa
+    // =========================================================================
+    [Fact(DisplayName = "13 · Demo 15_maquina_virtual — cuadruplos con direcciones")]
+    public void Demo_13_MaquinaVirtual()
+    {
+        var path = Path.Combine(ExamplesDir, "15_maquina_virtual.patito");
+        if (!File.Exists(path))
+        {
+            _out.WriteLine($"  [OMITIDO] Archivo no encontrado: {path}");
+            return;
+        }
+        RunDemo(File.ReadAllText(path), "15_maquina_virtual");
+    }
+
+    // =========================================================================
+    //  14 - Demo ejemplo 16: funciones con "retorno" global
+    // =========================================================================
+    [Fact(DisplayName = "14 · Demo 16_funciones_con_retorno — cuadruplos")]
+    public void Demo_14_FuncionesConRetorno()
+    {
+        var path = Path.Combine(ExamplesDir, "16_funciones_con_retorno.patito");
+        if (!File.Exists(path))
+        {
+            _out.WriteLine($"  [OMITIDO] Archivo no encontrado: {path}");
+            return;
+        }
+        RunDemo(File.ReadAllText(path), "16_funciones_con_retorno");
+    }
+
+    // =========================================================================
     //  Prueba de integracion: todos los ejemplos en un solo test
     // =========================================================================
     [Fact(DisplayName = "ALL · Todos los ejemplos válidos — resumen de cuádruplos")]

@@ -1,1 +1,8 @@
 # bin & obj ignore
+**/bin/
+**/obj/
+**/.antlr/
+
+# Anular la exclusion de csproj del .gitignore raiz para este proyecto
+!src/Patito.Compiler/Patito.Compiler.csproj
+!tests/Patito.Tests/Patito.Tests.csproj

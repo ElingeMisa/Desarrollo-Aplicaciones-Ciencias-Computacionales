@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Tree;
 using Patito.Compiler.Generated;
+using Patito.Compiler.VM;
 
 namespace Patito.Compiler;
 
@@ -44,6 +46,7 @@ public static class Program
         bool printTree    = args.Contains("--tree");
         bool printSymbols = args.Contains("--symbols");
         bool printQuads   = args.Contains("--quads");
+        bool runVm        = args.Contains("--run") || args.Contains("-r");
 
         var source = File.ReadAllText(path);
         var result = PatitoFrontEnd.Compile(source, Path.GetFileName(path));
@@ -77,6 +80,27 @@ public static class Program
             var nFuncs   = result.Semantic?.Directory.Count ?? 0;
             var nGlobals = result.Semantic?.GlobalTable.Count ?? 0;
             var nQuads   = result.Quads?.Count ?? 0;
+
+            if (runVm)
+            {
+                // Modo --run: ejecutar la VM y mostrar su output
+                var constValues = result.ConstValues
+                    ?? new Dictionary<int, object>();
+                var vm = new VirtualMachine(
+                    result.Quads!,
+                    result.AddressBook!,
+                    constValues,
+                    result.FunctionDirectory!,
+                    Console.Out);
+                var vmResult = vm.Execute();
+                if (!vmResult.Success)
+                {
+                    Console.Error.WriteLine($"[VM ERROR] {vmResult.Error?.Message}");
+                    return 3;
+                }
+                return 0;
+            }
+
             Console.WriteLine(
                 $"[OK] {path}: {result.Tokens.Count} tokens, " +
                 $"{nGlobals} variable(s) global(es), {nFuncs} funcion(es), " +
@@ -168,7 +192,7 @@ public static class Program
 
     private static void PrintUsage()
     {
-        Console.WriteLine("Patito Compiler - Front End + Generacion de Cuadruplos");
+        Console.WriteLine("Patito Compiler - Front End + Generacion de Cuadruplos + Maquina Virtual");
         Console.WriteLine();
         Console.WriteLine("Uso:");
         Console.WriteLine("  patitoc <archivo.patito>            Analisis lexico + sintactico + semantico.");
@@ -176,6 +200,8 @@ public static class Program
         Console.WriteLine("  patitoc <archivo.patito> --tree     Imprime ademas el parse tree y las tablas.");
         Console.WriteLine("  patitoc <archivo.patito> --symbols  Imprime la tabla global y el directorio.");
         Console.WriteLine("  patitoc <archivo.patito> --quads    Imprime la fila de cuadruplos generados.");
+        Console.WriteLine("  patitoc <archivo.patito> --run      Compila y ejecuta con la maquina virtual.");
+        Console.WriteLine("  patitoc <archivo.patito> -r         Alias de --run.");
         Console.WriteLine("  patitoc --demo                      Corre un programa embebido.");
         Console.WriteLine();
     }

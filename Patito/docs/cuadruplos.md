@@ -514,10 +514,49 @@ Como ANTLR4 visita en pre-orden y llama los `Exit…` en post-orden, los `ExitTe
 
 ---
 
+## Cuádruplos con formato DIR(NOMBRE) — Entrega 5
+
+A partir de la Entrega 5, cada operando puede imprimirse con su **dirección virtual** antepuesta, usando el método `Quadruple.Format(addressBook)`:
+
+```
+#     Op        Left                 Right                Result
+----  --------  -------------------  -------------------  -------------------
+   0  =         25000(10)            _                    18000(n)
+   1  <         18000(n)             25001(5)             24000(t0)
+   2  GotoF     24000(t0)            _                    6
+   3  Print     _                    _                    27000("k =")
+   4  Print     _                    _                    18000(n)
+   5  Goto      _                    _                    1
+   6  ERA        _                   _                    saludar
+   7  Param     _                    _                    18000(n)
+   8  Gosub     saludar              _                    0
+```
+
+### Regla de enrutamiento
+
+| Segmento | Rango | Quién escribe | Ejemplo |
+|----------|-------|---------------|---------|
+| `GlobalInt` | 18000–18999 | Variables globales enteras | `n → 18000` |
+| `GlobalFloat` | 19000–19999 | Variables globales flotantes | `pi → 19000` |
+| `LocalInt` | 20000–20999 | Parámetros y locales de función | `limite → 20000` |
+| `LocalFloat` | 21000–21999 | Parámetros y locales flotantes | — |
+| `TempInt` | 22000–22999 | Temporales enteros (reset por función) | `t0 → 22000` |
+| `TempFloat` | 23000–23999 | Temporales flotantes | — |
+| `TempBool` | 24000–24999 | Resultados de operadores relacionales | `t0 → 24000` |
+| `ConstInt` | 25000–25999 | Constantes enteras literales | `42 → 25000` |
+| `ConstFloat` | 26000–26999 | Constantes flotantes literales | `3.14 → 26000` |
+| `ConstString` | 27000–27999 | Cadenas literales | `"hola" → 27000` |
+
+### Output real para `14_cuadruplos_funciones.patito`
+
+Compilando con `patitoc examples/14_cuadruplos_funciones.patito --quads` se obtiene un listado en el formato arriba. Los operandos del programa principal usan el segmento `Global*` (18000+), los parámetros de `imprimirHasta` y `doble` usan `Local*` (20000+), y los temporales de las condiciones y ciclos usan `TempBool` (24000+).
+
+---
+
 ## Ver también
 
-- [`estructuras.md`](estructuras.md) — diseño de `PilaOperadores`, `PilaOperandos`, `PilaTipos`, `FilaCuadruplos` y `QuadrupleEmitter`.
+- [`estructuras.md`](estructuras.md) — diseño de `PilaOperadores`, `PilaOperandos`, `PilaTipos`, `FilaCuadruplos`, `QuadrupleEmitter` y las nuevas estructuras de la VM.
 - [`puntos_neuralgicos.md`](puntos_neuralgicos.md) — tabla completa PN-1 a PN-18 con disparadores y acciones.
 - [`cubo_semantico.md`](cubo_semantico.md) — tabla de tipos consultada en `EmitBinary`.
-- [`pruebas.md`](pruebas.md) — suite de pruebas unitarias de generación de código (`CodeGenTests.cs`).
+- [`pruebas.md`](pruebas.md) — suite de pruebas unitarias de generación de código (`CodeGenTests.cs`) y tests de la VM (`VirtualMachineTests.cs`).
 - [`gramatica.md`](gramatica.md) — las producciones (`asigna`, `condicion`, `ciclo`, `factor`…) que disparan cada punto neurálgico.
