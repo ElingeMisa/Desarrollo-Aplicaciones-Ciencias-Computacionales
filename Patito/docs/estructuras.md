@@ -260,6 +260,95 @@ Resultado: al terminar el recorrido, `_emitter.Fila.Quads` contiene la fila comp
 
 ---
 
+## Estructuras de la Entrega 5 — Memoria de Ejecución
+
+La Entrega 5 agrega una **Máquina Virtual** que interpreta los cuádruplos. Las nuevas estructuras viven en `src/Patito.Compiler/VM/`.
+
+### ExecutionMemory
+
+Almacén de memoria indexado por dirección virtual.
+
+```
+ExecutionMemory
+  _cells : Dictionary<int, object>   addr → valor real (int/double/bool/string)
+  ──────────────────────────────────────────────────────
+  Set(addr, val)    → escribe val en addr
+  Get(addr)         → lee addr (lanza si no inicializado)
+  TryGet(addr, out) → intento de lectura sin excepción
+  Reset()           → borra todas las celdas
+```
+
+#### Diagrama ASCII de segmentos con valores (ejemplo)
+
+```
+ _globalMemory          _activeLocal (frame activo)
+ ┌──────────────────┐   ┌──────────────────────────┐
+ │ 18000 → 3        │   │ 20000 → 5 (param 'n')    │
+ │ 18001 → 7        │   │ 20001 → 0 (local 'i')    │
+ │ 19000 → 3.14     │   │ 22000 → true (temp bool) │
+ │ 25000 → 42       │◄──┤ 22001 → 8    (temp int)  │
+ │ 27000 → "hola"   │   └──────────────────────────┘
+ └──────────────────┘   ← nueva instancia por llamada
+```
+
+**Enrutamiento de acceso:**
+- `addr ∈ [20000, 24999]` → `_activeLocal`
+- `addr ∈ [18000, 19999] ∪ [25000, 27999]` → `_globalMemory`
+
+La fórmula `addr - BaseOf(seg)` da el *offset* dentro del segmento (útil para inspección o límite de tamaño).
+
+---
+
+### ActivationRecord
+
+Frame de pila de llamadas.
+
+```
+ActivationRecord
+  FunctionName : string             nombre de la función que creó el frame
+  ReturnQuad   : int                índice del cuádruplo de retorno
+  LocalMemory  : ExecutionMemory    parámetros + locales + temporales del frame
+  _pendingArgs : List<(addr,val)>   argumentos recopilados por Param, antes de Gosub
+  ──────────────────────────────────────────────────────────────────────────────
+  PushArg(addr, val)  → agrega (addr_param_formal, valor_arg_real)
+  PopArgs()           → devuelve la lista y la vacía
+```
+
+#### Diagrama de la call stack en tiempo de ejecución
+
+```
+inicio { ... suma(a, b) ... }
+
+  _callStack (Stack)
+  ╔══════════════════════════════╗  ← tope
+  ║  returnPc = 12               ║
+  ║  savedLocal = main_frame     ║
+  ╠══════════════════════════════╣
+  ║  (vacío — sola llamada)      ║
+  ╚══════════════════════════════╝
+
+  _activeLocal = suma_frame.LocalMemory
+    20000 → 3  (param 'a')
+    20001 → 4  (param 'b')
+```
+
+Al ejecutar `EndFunc`:  
+1. Pop → `(returnPc=12, savedLocal=main_frame)`  
+2. `_activeLocal = main_frame`  
+3. `pc = 12`
+
+---
+
+### VirtualMachine — métodos principales
+
+| Firma | Descripción |
+|-------|-------------|
+| `VirtualMachine(quads, addressBook, constValues, funcDir, output?)` | Constructor. `output` es inyectable para tests. |
+| `Execute() → VmResult` | Carga constantes, ejecuta el loop `while(pc < quads.Count)`. |
+| `GetMemory(addr) → object?` | Lee la dirección virtual (global o local activo). Útil en tests. |
+
+---
+
 ## Ver también
 
 - [`puntos_neuralgicos.md`](puntos_neuralgicos.md) — los `Enter…`/`Exit…` que llenan estas estructuras durante el recorrido del árbol.

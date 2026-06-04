@@ -146,6 +146,52 @@ public sealed class QuadrupleEmitter
     public void ResetTemps() => _map.ResetTemps();
 
     // =========================================================================
+    //  Valores de constantes (Entrega 5 — VM)
+    // =========================================================================
+
+    /// <summary>
+    /// Construye un diccionario  direccion → valor real  con todas las
+    /// constantes registradas en el pool. La VM lo usa para pre-cargar la
+    /// memoria antes de iniciar la ejecucion.
+    ///
+    /// Conversion por segmento:
+    ///   ConstInt    (25000-25999) → <see cref="int"/> (parse del literal).
+    ///   ConstFloat  (26000-26999) → <see cref="double"/> (parse del literal).
+    ///   ConstString (27000-27999) → <see cref="string"/> sin comillas externas.
+    /// </summary>
+    public System.Collections.Generic.Dictionary<int, object> BuildConstValues()
+    {
+        var result = new System.Collections.Generic.Dictionary<int, object>();
+        foreach (var kvp in _constPool)
+        {
+            string literal = kvp.Key;
+            int    addr    = kvp.Value;
+            object val;
+
+            if (addr >= VirtualMemoryMap.ConstIntBase &&
+                addr <  VirtualMemoryMap.ConstIntBase + VirtualMemoryMap.SegmentSize)
+            {
+                val = int.Parse(literal, System.Globalization.CultureInfo.InvariantCulture);
+            }
+            else if (addr >= VirtualMemoryMap.ConstFloatBase &&
+                     addr <  VirtualMemoryMap.ConstFloatBase + VirtualMemoryMap.SegmentSize)
+            {
+                val = double.Parse(literal, System.Globalization.CultureInfo.InvariantCulture);
+            }
+            else
+            {
+                // ConstString: quitar comillas externas si las tiene
+                val = literal.Length >= 2 && literal[0] == '"' && literal[^1] == '"'
+                    ? literal[1..^1]
+                    : literal;
+            }
+
+            result[addr] = val;
+        }
+        return result;
+    }
+
+    // =========================================================================
     //  Generacion de temporales
     // =========================================================================
 

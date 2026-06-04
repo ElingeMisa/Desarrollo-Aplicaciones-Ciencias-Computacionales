@@ -1,0 +1,72 @@
+// =============================================================================
+//  15_maquina_virtual.patito
+//  Ejemplo de demostracion — Entrega 5: Maquina Virtual
+//
+//  Ejercita:
+//    * Variables globales (entero y flotante)
+//    * Funcion nula con parametros y variables locales
+//    * Ciclo mientras/haz
+//    * Condicional si/sino
+//    * Multiples llamadas a funcion con distintos argumentos
+//    * escribe con cadenas literales y variables
+//
+//  Output esperado (en orden):
+//    === Patito VM Demo ===
+//    suma de 1 a n:
+//    1
+//    3
+//    6
+//    10
+//    resultado acumulado:
+//    10
+//    n no es 4      (primer verificar: n=5, 5 != 4)
+//    n es igual a 4 (segundo verificar: n=4, 4 == 4)
+//    fin
+// =============================================================================
+
+programa vm_demo;
+
+vars
+    n, acum: entero;
+
+nula acumular (limite: entero) {
+    vars
+        i, total: entero;
+    i     = 1;
+    total = 0;
+    mientras (i < limite) haz {
+        total = total + i;
+        escribe(total);
+        i = i + 1;
+    };
+};
+
+nula verificar (val: entero) {
+    vars
+        cmp: entero;
+    cmp = 4;
+    si (val == cmp) {
+        escribe("n es igual a 4");
+    } sino {
+        escribe("n no es 4");
+    };
+};
+
+inicio {
+    escribe("=== Patito VM Demo ===");
+
+    n = 5;
+    escribe("suma de 1 a n:");
+    acumular(n);
+
+    acum = 10;
+    escribe("resultado acumulado:");
+    escribe(acum);
+
+    verificar(n);
+
+    n = 4;
+    verificar(n);
+
+    escribe("fin");
+} fin

@@ -1,0 +1,48 @@
+// =============================================================================
+//  16_funciones_con_retorno.patito
+//  Ejemplo de demostracion — Entrega 5: Funciones con efecto en variable global
+//
+//  Nota: Patito no tiene instruccion 'return' explicita. La convencion de
+//  esta entrega para "retornar un valor" es que la funcion escribe el
+//  resultado en una variable global dedicada antes de terminar.
+//  Esto es posible porque las funciones tienen acceso de lectura y escritura
+//  a los globales que no esten sombreados por variables locales.
+//
+//  Ejercita:
+//    * Escritura a variable global desde dentro de una funcion
+//    * Uso del resultado almacenado globalmente tras la llamada
+//    * Composicion de dos funciones via variable compartida
+//
+//  Output esperado:
+//    "cuadrado de 5:"
+//    25
+//    "cuadrado de 3:"
+//    9
+//    "suma de cuadrados:"
+//    34
+// =============================================================================
+
+programa retorno_global;
+
+vars
+    retval, a, b, suma: entero;
+
+entero cuadrado (val: entero) {
+    retval = val * val;
+};
+
+inicio {
+    escribe("cuadrado de 5:");
+    a = 5;
+    cuadrado(a);
+    escribe(retval);
+
+    escribe("cuadrado de 3:");
+    b = 3;
+    cuadrado(b);
+    escribe(retval);
+
+    suma = 25 + 9;
+    escribe("suma de cuadrados:");
+    escribe(suma);
+} fin

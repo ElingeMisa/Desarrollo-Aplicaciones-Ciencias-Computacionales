@@ -203,6 +203,34 @@ ExitCiclo             → emit "Goto _ _ 0"      [regresa al inicio]
 
 ---
 
+## PN-7b y PN-18 con direcciones virtuales (Entrega 5)
+
+### PN-7b — `ResetTemps()` por función
+
+Al entrar al `func_body` de cada función, `_emitter.ResetTemps()` reinicia los contadores de `TempInt` (22000), `TempFloat` (23000) y `TempBool` (24000). Esto garantiza que cada activación de la función reutiliza las mismas direcciones del segmento Temp desde el offset 0, sin solaparse con los temporales del llamador (que se salvan en la call stack junto con el `_activeLocal` del frame).
+
+### PN-18 — `ExitCall_stmt` con direcciones virtuales
+
+El cuádruplo `Param _ _ argName` lleva el **nombre** del argumento real (e.g. `a`). La VM resuelve su dirección virtual en tiempo de ejecución consultando el `AddressBook`. Esto es correcto porque:
+
+1. `a` siempre tiene una dirección virtual fija asignada en compilación.
+2. Al procesar `Param`, la VM conoce qué función es la pendiente (del ERA previo) y puede buscar la dirección del parámetro formal correspondiente en `funcDir.LocalTable`.
+3. El valor leído de la dirección de `a` se copia al `LocalMemory` del nuevo frame en la dirección del parámetro formal.
+
+Ejemplo para `suma(a, b)` donde `a → 18000`, `b → 18001`, `x → 20000`, `y → 20001`:
+
+```
+ERA   _  _  suma          → crear pendingRecord("suma")
+Param _  _  18000(a)      → GetValue("a")=3 → PushArg(20000, 3)
+Param _  _  18001(b)      → GetValue("b")=4 → PushArg(20001, 4)
+Gosub suma  _  startQ     → LocalMemory[20000]=3, LocalMemory[20001]=4
+                             callStack.push(pc+1, mainFrame)
+                             _activeLocal = suma.LocalMemory
+                             pc = startQ
+```
+
+---
+
 ## Ver también
 
 - [`estructuras.md`](estructuras.md) — diseño de las tablas/directorio que cada punto neurálgico lee o escribe.
