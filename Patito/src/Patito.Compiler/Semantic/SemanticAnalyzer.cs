@@ -81,6 +81,9 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
     // Pila de funciones activas (0 o 1 elemento en Patito, sin anidamiento).
     private readonly Stack<FunctionInfo> _scopeStack = new();
 
+    // Indice del Goto inicial que salta sobre los cuerpos de funcion al inicio{}.
+    private int _mainGotoIdx = -1;
+
     // --- Estructuras de Entrega 3 -------------------------------------------
     // Emitter que agrupa las tres pilas (Operadores, Operandos, Tipos) y la
     // fila de cuadruplos.
@@ -116,6 +119,12 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         var funcsCtx = ctx.funcs();
         if (funcsCtx is not null)
             ProcessFuncs(funcsCtx);
+
+        // [PN-0] Si hay funciones, emitir Goto inicial que salta sobre sus
+        //        cuerpos y aterriza en el inicio{}. Se hace backfill en
+        //        EnterCuerpo cuando el padre es ProgramaContext.
+        //        (Sin funciones el goto es innecesario pero inocuo.)
+        _mainGotoIdx = _emitter.Fila.Emit(QuadOp.Goto, null, null, "?");
     }
 
     // ==========================================================================
@@ -226,6 +235,17 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
             if (localVars is not null)
                 ProcessVars(localVars, info.LocalTable, isGlobal: false);
         }
+    }
+
+    // ==========================================================================
+    //  [PN-0b] EnterCuerpo: si el padre es ProgramaContext, este es el cuerpo
+    //          del inicio{}. Hacer backfill del Goto inicial para que la VM
+    //          arranque directamente aqui.
+    // ==========================================================================
+    public override void EnterCuerpo(PatitoParser.CuerpoContext ctx)
+    {
+        if (ctx.Parent is PatitoParser.ProgramaContext && _mainGotoIdx >= 0)
+            _emitter.Fila.Backfill(_mainGotoIdx, _emitter.Fila.Count.ToString());
     }
 
     // ==========================================================================
