@@ -1,11 +1,12 @@
 # Generación de Código Intermedio — Cuádruplos
 
-> Documentación actualizada a la **Entrega 4** del compilador. Ver el [índice general](README.md) para más contexto.
+> Documentación actualizada a la **Entrega 5** del compilador. Ver el [índice general](README.md) para más contexto.
 
 Un **cuádruplo** es la unidad mínima de código intermedio: una instrucción de la forma `(Op, Left, Right, Result)` que puede ser ejecutada directamente por una máquina virtual o traducida a código objeto. Este documento explica el formato de los cuádruplos de Patito, los algoritmos que los generan y el resultado final para varios programas de prueba.
 
 Las **estructuras de datos** que soportan la generación (pilas y fila) están descritas en [`estructuras.md`](estructuras.md#estructuras-de-la-entrega-3--generación-de-cuádruplos).  
-Los **puntos neurálgicos** que disparan cada algoritmo están mapeados en [`puntos_neuralgicos.md`](puntos_neuralgicos.md#puntos-neurálgicos-de-la-entrega-3--generación-de-cuádruplos).
+Los **puntos neurálgicos** que disparan cada algoritmo están mapeados en [`puntos_neuralgicos.md`](puntos_neuralgicos.md), incluyendo **PN-0** (Goto inicial) que habilita la ejecución por la Máquina Virtual.  
+La **Máquina Virtual** que interpreta estos cuádruplos está documentada en [`memoria_ejecucion.md`](memoria_ejecucion.md).
 
 ---
 

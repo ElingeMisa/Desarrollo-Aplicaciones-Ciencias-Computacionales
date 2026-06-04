@@ -1,27 +1,35 @@
-# Patito Compiler — Entregas 0, 1 y 2
+# Compilador Patito — Entregas 0 a 5
 
-Compilador del lenguaje **Patito** (Víctor Misael Escalante Alvarado, A01741176).
+Compilador completo del lenguaje **Patito** (Víctor Misael Escalante Alvarado, A01741176).
 
-- **Entrega 0:** definición del lenguaje (expresiones regulares, BNF y diagramas de sintaxis).
-- **Entrega 1:** front-end con **ANTLR 4** sobre **C# / .NET 8+** (scanner y parser).
-- **Entrega 2:** análisis semántico — cubo semántico, tabla de variables, directorio de funciones y los puntos neurálgicos que las llenan con todas las validaciones pertinentes (variable doblemente declarada, función redeclarada, identificador no declarado, etc.).
+| Entrega | Alcance |
+|---------|---------|
+| **0** | Definición del lenguaje: expresiones regulares, BNF y diagramas de sintaxis. |
+| **1** | Front-end con **ANTLR 4** sobre **C# / .NET 10** — scanner y parser. |
+| **2** | Análisis semántico: cubo semántico, tabla de variables, directorio de funciones y puntos neurálgicos con todas las validaciones de tipos e identificadores. |
+| **3** | Generación de cuádruplos para expresiones, asignaciones, `si`/`sino` y `mientras`. |
+| **4** | Generación de cuádruplos para declaración e invocación de funciones (ERA / Param / Gosub / EndFunc). |
+| **5** | Direcciones virtuales completas + **Máquina Virtual** que interpreta todos los cuádruplos de código intermedio. |
 
 ## Documentación
 
 Toda la documentación técnica vive en **[`docs/`](docs/)**. El [índice principal](docs/README.md) lleva a cada página, organizadas por **tema**:
 
-| Tema                            | Documento                                                                                    |
-|---------------------------------|----------------------------------------------------------------------------------------------|
-| Descripción del lenguaje        | [`docs/lenguaje.md`](docs/lenguaje.md)                                                       |
-| Análisis léxico (regex, tokens) | [`docs/lexico.md`](docs/lexico.md)                                                           |
-| Gramática (BNF y `.g4`)          | [`docs/gramatica.md`](docs/gramatica.md)                                                     |
-| Comparación y elección de tooling | [`docs/herramientas.md`](docs/herramientas.md)                                              |
-| Cubo semántico                   | [`docs/cubo_semantico.md`](docs/cubo_semantico.md)                                           |
-| Estructuras (`VariableTable`, `FunctionDirectory`) | [`docs/estructuras.md`](docs/estructuras.md)                                |
-| Puntos neurálgicos del listener  | [`docs/puntos_neuralgicos.md`](docs/puntos_neuralgicos.md)                                   |
-| Plan de pruebas                  | [`docs/pruebas.md`](docs/pruebas.md)                                                         |
+| Tema | Documento |
+|------|-----------|
+| Descripción del lenguaje | [`docs/lenguaje.md`](docs/lenguaje.md) |
+| Análisis léxico (regex, tokens) | [`docs/lexico.md`](docs/lexico.md) |
+| Gramática (BNF y `.g4`) | [`docs/gramatica.md`](docs/gramatica.md) |
+| Comparación y elección de tooling | [`docs/herramientas.md`](docs/herramientas.md) |
+| Cubo semántico | [`docs/cubo_semantico.md`](docs/cubo_semantico.md) |
+| Estructuras (tablas, directorio, pilas, emitter, VM) | [`docs/estructuras.md`](docs/estructuras.md) |
+| Puntos neurálgicos del listener | [`docs/puntos_neuralgicos.md`](docs/puntos_neuralgicos.md) |
+| Cuádruplos de código intermedio | [`docs/cuadruplos.md`](docs/cuadruplos.md) |
+| Mapa de Direcciones Virtuales | [`docs/direcciones_virtuales.md`](docs/direcciones_virtuales.md) |
+| **Memoria de Ejecución y Máquina Virtual** | [`docs/memoria_ejecucion.md`](docs/memoria_ejecucion.md) |
+| Plan de pruebas | [`docs/pruebas.md`](docs/pruebas.md) |
 
-## Descripcion del lenguaje
+## Descripción del lenguaje
 
 ![Reglas](img/Reglas.png)
 
@@ -30,99 +38,136 @@ Para los detalles, ver [`docs/lenguaje.md`](docs/lenguaje.md).
 ## Estructura del repositorio
 
 ```
-Patito-Compiler/
+Patito/
 ├── Patito.sln
-├── README.md                                Este archivo (resumen + enlaces a docs/)
-├── docs/                                    Documentacion tecnica, por tema
-│   ├── README.md                            Indice principal
-│   ├── lenguaje.md                          Descripcion del lenguaje (Entrega 0)
-│   ├── lexico.md                            Tokens y expresiones regulares
-│   ├── gramatica.md                         BNF + reglas ANTLR4 con sus adaptaciones
-│   ├── herramientas.md                      Comparacion + eleccion de ANTLR4
-│   ├── cubo_semantico.md                    Tabla de consideraciones semanticas
-│   ├── estructuras.md                       Tabla de variables y directorio de funciones
-│   ├── puntos_neuralgicos.md                Listener: cada Enter/Exit y su validacion
-│   └── pruebas.md                           Plan de pruebas consolidado
-├── examples/                                Programas .patito de prueba
-│   ├── 01_minimo.patito                     Casos validos
-│   ├── 02_vars_y_asigna.patito
-│   ├── 03_condicion.patito
-│   ├── 04_ciclo.patito
-│   ├── 05_funcion.patito
-│   ├── 06_expresiones.patito
-│   ├── 07_comentarios.patito
-│   ├── invalido_01_falta_punto_coma.patito  Casos invalidos (deben fallar)
-│   ├── invalido_02_parentesis.patito
-│   ├── invalido_03_letrero_multilinea.patito
-│   ├── invalido_04_caracter_invalido.patito
-│   └── invalido_05_tipo_invalido.patito
+├── README.md                                Este archivo
+├── docs/                                    Documentación técnica, por tema
+│   ├── README.md                            Índice principal
+│   ├── lenguaje.md
+│   ├── lexico.md
+│   ├── gramatica.md
+│   ├── herramientas.md
+│   ├── cubo_semantico.md
+│   ├── estructuras.md
+│   ├── directorio_y_tablas.md
+│   ├── puntos_neuralgicos.md
+│   ├── cuadruplos.md
+│   ├── direcciones_virtuales.md
+│   ├── memoria_ejecucion.md                 NUEVO — Entrega 5
+│   └── pruebas.md
+├── examples/
+│   ├── 01_minimo.patito … 14_cuadruplos_funciones.patito   Casos válidos
+│   ├── 15_maquina_virtual.patito            NUEVO — demo completo de la VM
+│   └── invalido_01 … invalido_11.patito     Casos inválidos (deben fallar)
 ├── src/Patito.Compiler/
-│   ├── Patito.Compiler.csproj               Proyecto de consola con ANTLR4
-│   ├── Patito.g4                            Gramatica unificada (lexer + parser)
+│   ├── Patito.Compiler.csproj
+│   ├── Patito.g4                            Gramática unificada (lexer + parser)
 │   ├── Program.cs                           Driver CLI (patitoc)
-│   ├── PatitoFrontEnd.cs                    API in-process (scanner + parser + semantica)
-│   ├── PatitoErrorListener.cs               Captura de errores lexicos/sintacticos
-│   └── Semantic/                            ENTREGA 2
-│       ├── SemanticType.cs                  Enum de tipos (Entero, Flotante, Bool, Nula, Error)
-│       ├── SemanticOp.cs                    Operadores binarios + asignacion
-│       ├── SemanticCube.cs                  Cubo semantico (tabla de compatibilidad de tipos)
-│       ├── Symbol.cs                        Entrada de la tabla de variables
-│       ├── VariableTable.cs                 Tabla de variables por alcance
-│       ├── FunctionInfo.cs                  Firma + tabla local de una funcion
-│       ├── FunctionDirectory.cs             Directorio de funciones (uno por programa)
-│       ├── SemanticError.cs                 Error semantico con codigo estable
-│       └── SemanticAnalyzer.cs              Listener con los puntos neuralgicos
+│   ├── PatitoFrontEnd.cs                    API in-process (compilar + ejecutar)
+│   ├── PatitoErrorListener.cs
+│   ├── Semantic/
+│   │   ├── SemanticType.cs
+│   │   ├── SemanticOp.cs
+│   │   ├── SemanticCube.cs
+│   │   ├── Symbol.cs
+│   │   ├── VariableTable.cs
+│   │   ├── FunctionInfo.cs
+│   │   ├── FunctionDirectory.cs
+│   │   ├── SemanticError.cs
+│   │   └── SemanticAnalyzer.cs              Listener con todos los puntos neurálgicos
+│   ├── CodeGen/
+│   │   ├── QuadOp.cs
+│   │   ├── Quadruple.cs
+│   │   ├── FilaCuadruplos.cs
+│   │   ├── PilaOperadores.cs
+│   │   ├── PilaOperandos.cs
+│   │   ├── PilaTipos.cs
+│   │   ├── QuadrupleEmitter.cs
+│   │   └── VirtualMemoryMap.cs
+│   └── VM/                                  NUEVO — Entrega 5
+│       ├── ExecutionMemory.cs               Almacén dirección → valor en tiempo de ejecución
+│       ├── ActivationRecord.cs              Frame de la pila de llamadas
+│       ├── VirtualMachine.cs                Intérprete de cuádruplos
+│       └── VmResult.cs                      Resultado de ejecución (output, error, success)
 └── tests/Patito.Tests/
-    ├── Patito.Tests.csproj                  xUnit
-    ├── ScannerTests.cs                      Pruebas lexicas (tokens, longest-match)
-    ├── ParserTests.cs                       Pruebas sintacticas (validos / invalidos)
-    ├── SemanticCubeTests.cs                 Verifica todas las celdas del cubo
-    ├── VariableTableTests.cs                Pruebas unitarias de VariableTable
-    ├── FunctionDirectoryTests.cs            Pruebas unitarias de FunctionDirectory
-    └── SemanticAnalyzerTests.cs             Pruebas E2E del analisis semantico
+    ├── Patito.Tests.csproj
+    ├── ScannerTests.cs
+    ├── ParserTests.cs
+    ├── SemanticCubeTests.cs
+    ├── VariableTableTests.cs
+    ├── FunctionDirectoryTests.cs
+    ├── SemanticAnalyzerTests.cs
+    ├── CodeGenTests.cs
+    ├── QuadruplesDemoTests.cs
+    └── VirtualMachineTests.cs               NUEVO — TC-VM-01 a TC-VM-07
 ```
 
-## Cómo construir y correr
+## Cómo construir y ejecutar
 
-Requisitos: **.NET 8 SDK o superior** (`dotnet --version` → 8.x o mayor). El proyecto está configurado para `net10.0`; ajusta `TargetFramework` en los `.csproj` si necesitas una versión menor.
-
-ANTLR4 se descarga automáticamente vía NuGet (`Antlr4.Runtime.Standard` + `Antlr4BuildTasks`); no necesitas instalar Java.
+**Requisitos:** .NET 10 SDK (`dotnet --version` → 10.x). ANTLR4 se descarga automáticamente vía NuGet.
 
 ```bash
-# Restaurar y compilar (Patito.g4 -> *.cs se hace en este paso)
+# Compilar (genera lexer/parser desde Patito.g4)
 dotnet build
 
-# Correr el ejecutable contra un archivo
-dotnet run --project src/Patito.Compiler -- examples/02_vars_y_asigna.patito --tokens --tree
+# Analizar un archivo (léxico + sintáctico + semántico)
+dotnet run --project src/Patito.Compiler -- examples/05_funcion.patito
 
-# Imprimir el directorio de funciones y las tablas
+# Imprimir tokens
+dotnet run --project src/Patito.Compiler -- examples/05_funcion.patito --tokens
+
+# Imprimir árbol de derivación y tablas de símbolos
+dotnet run --project src/Patito.Compiler -- examples/05_funcion.patito --tree
+
+# Imprimir tabla global y directorio de funciones
 dotnet run --project src/Patito.Compiler -- examples/05_funcion.patito --symbols
 
-# Demo embebido (sin archivos)
-dotnet run --project src/Patito.Compiler -- --demo
+# Imprimir fila de cuádruplos con direcciones virtuales
+dotnet run --project src/Patito.Compiler -- examples/14_cuadruplos_funciones.patito --quads
 
-# Correr la suite de pruebas (lex + parse + semantica)
+# Compilar Y ejecutar con la Máquina Virtual
+dotnet run --project src/Patito.Compiler -- examples/15_maquina_virtual.patito --run
+
+# Demo embebido (smoke test sin archivos)
+dotnet run --project src/Patito.Compiler -- --demo
+```
+
+## Suite de pruebas
+
+```bash
+# Toda la suite
 dotnet test
 
-# Corre los tests pero en una tabla comparativa
-source test-samples.sh
+# Solo test cases de la Máquina Virtual
+dotnet test --filter "FullyQualifiedName~VirtualMachineTests" -v normal
+
+# Demo visual de cuádruplos
+dotnet test --filter "FullyQualifiedName~QuadruplesDemoTests" -v normal
+
+# Sin demos (más rápido en CI)
+dotnet test --filter "FullyQualifiedName!~QuadruplesDemoTests"
 ```
 
-## Salida del CLI
+| Clase | Tests | Cubre |
+|-------|-------|-------|
+| `ScannerTests` | 12 | Tokens, longest-match, comentarios |
+| `ParserTests` | 14 | Producciones, precedencia, archivos |
+| `SemanticCubeTests` | 9 | Todas las celdas del cubo |
+| `VariableTableTests` | 4 | Declarar, duplicado, lookup |
+| `FunctionDirectoryTests` | 4 | Directorio de funciones |
+| `SemanticAnalyzerTests` | 13 | Semántica end-to-end |
+| `CodeGenTests` | 24 | PN-8 a PN-18, Backfill |
+| `QuadruplesDemoTests` | 12 | Demo visual con cuádruplos |
+| **`VirtualMachineTests`** | **7** | **TC-VM-01 a TC-VM-07 — VM completa** |
 
-```
-patitoc <archivo.patito>            análisis léxico + sintáctico + semántico
-patitoc <archivo.patito> --tokens   imprime además la lista de tokens
-patitoc <archivo.patito> --tree     imprime además el parse tree y las tablas
-patitoc <archivo.patito> --symbols  imprime la tabla global + directorio de funciones
-patitoc --demo                      programa embebido (CI/smoke)
-```
+## Mensajes del CLI
 
-Categorías de errores reportados:
-
-- `[LEX]` — error léxico (scanner).
-- `[PARSE]` — error sintáctico (parser).
-- `[SEM]` — error semántico (Entrega 2: doble declaración, identificador no declarado, etc.).
+| Prefijo | Origen |
+|---------|--------|
+| `[LEX]` | Error léxico (scanner) |
+| `[PARSE]` | Error sintáctico (parser) |
+| `[SEM]` | Error semántico (doble declaración, tipo incompatible, etc.) |
+| `[VM ERROR]` | Excepción en tiempo de ejecución de la Máquina Virtual |
 
 ## Repositorio remoto
 

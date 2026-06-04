@@ -1,13 +1,14 @@
 # Puntos Neurálgicos del Análisis Semántico
 
-> Documentación actualizada a la **Entrega 4** del compilador. Ver el [índice general](README.md) para más contexto.
+> Documentación actualizada a la **Entrega 5** del compilador. Ver el [índice general](README.md) para más contexto.
 
 Un **punto neurálgico** es un instante específico durante el recorrido del árbol de derivación en el que el compilador realiza una acción semántica (registrar un símbolo, validar un tipo, emitir un cuadruplo, etc.). En la implementación con ANTLR4, cada método `EnterX`/`ExitX` del listener `SemanticAnalyzer` puede ser un punto neurálgico. Las reglas gramaticales en las que se enganchan estos métodos están detalladas en [`gramatica.md`](gramatica.md), y las estructuras que se llenan en cada punto, en [`estructuras.md`](estructuras.md).
 
-La siguiente tabla resume los puntos neurálgicos implementados en la Entrega 2, mapeando cada uno a su regla gramatical y a la(s) validación(es) que aplica.
+La siguiente tabla resume todos los puntos neurálgicos implementados, incluyendo el **PN-0** de la Entrega 5 que habilita la Máquina Virtual.
 
 | #     | Punto neurálgico         | Disparador en la gramática              | Acción semántica                                                              | Validaciones                                                                                        |
 |-------|--------------------------|------------------------------------------|-------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
+| PN-0  | `EnterPrograma` / `EnterCuerpo` | `programa`, `cuerpo` (del programa) | **[Entrega 5]** Emite `Goto "?"` como quad 0 al final de `EnterPrograma`; hace backfill en `EnterCuerpo` cuando el padre es `ProgramaContext`. Garantiza que la VM salte los cuerpos de función y arranque en `inicio{}`. | — |
 | PN-1  | `EnterPrograma`          | `programa : KW_PROGRAMA ID ; …`          | Registra `ProgramName` en el directorio. Dispara PN-2 (globales) y PN-3.      | —                                                                                                   |
 | PN-2  | `ProcessVars`            | `vars`, `listado_vars`                   | Recorre cada `ids : tipo ;` y añade cada `ID` a la `VariableTable` activa.    | **Variable doblemente declarada** → `VariableRedeclared`.                                          |
 | PN-3  | `ProcessFuncs`           | `funcs` (cada función)                   | Crea `FunctionInfo(nombre, returnType)`, lo registra en el directorio, llena su `LocalTable` con parámetros y locales. | **Nombre choca con el del programa** → `NameClashesWithProgram`. **Función ya declarada** → `FunctionRedeclared`. **Parámetro duplicado** → `ParameterRedeclared`. **Local choca con otro local o con un parámetro** → `VariableRedeclared`. |
@@ -231,9 +232,59 @@ Gosub suma  _  startQ     → LocalMemory[20000]=3, LocalMemory[20001]=4
 
 ---
 
+## PN-0 — Goto inicial al inicio{} (Entrega 5)
+
+Este punto neurálgico fue necesario para que la **Máquina Virtual** pudiera ejecutar programas con funciones. Sin él, la VM comenzaba en el cuádruplo 0 — que pertenecía al cuerpo de la primera función declarada — sin que nadie hubiera preparado los parámetros, causando el error:
+
+```
+[VM ERROR] La dirección virtual 20000 no fue inicializada antes de su primer uso.
+```
+
+### Causa raíz
+
+ANTLR4 recorre el árbol en profundidad. Como `funcs` precede a `inicio` en la producción `programa`, los cuerpos de función se visitan antes que el bloque `inicio{}`. Los cuádruplos de esos cuerpos quedan al inicio de la lista desde el cuádruplo 0, y la VM arranca ahí.
+
+### Solución
+
+El patrón estándar para este problema es emitir un `Goto` incondicionado como **primer cuádruplo** que salte sobre todos los cuerpos de función y aterrice justo en el primer cuádruplo de `inicio{}`. El destino no se conoce todavía al emitirlo, así que se usa Backfill.
+
+**Implementación en `SemanticAnalyzer.cs`:**
+
+```csharp
+// Campo nuevo
+private int _mainGotoIdx = -1;
+
+// Al final de EnterPrograma (después de registrar vars y funciones):
+_mainGotoIdx = _emitter.Fila.Emit(QuadOp.Goto, null, null, "?");
+
+// Nuevo override:
+public override void EnterCuerpo(PatitoParser.CuerpoContext ctx)
+{
+    // Solo aplica cuando el padre es ProgramaContext (el cuerpo del inicio{})
+    if (ctx.Parent is PatitoParser.ProgramaContext && _mainGotoIdx >= 0)
+        _emitter.Fila.Backfill(_mainGotoIdx, _emitter.Fila.Count.ToString());
+}
+```
+
+### Estructura resultante de la fila de cuádruplos
+
+```
+quad[0]   Goto  _  _  N          ← salta sobre todos los cuerpos de función
+quad[1]   ...                    ← cuerpo de función 1
+quad[K]   EndFunc  _  _  func1
+quad[K+1] ...                    ← cuerpo de función 2
+quad[M]   EndFunc  _  _  func2
+quad[N]   ...                    ← primer cuádruplo de inicio{} ← la VM empieza aquí
+```
+
+Las funciones son alcanzables únicamente vía `Gosub`, que salta directamente a su `StartQuad`. El `Goto` inicial es inocuo en programas sin funciones (salta a N=1).
+
+---
+
 ## Ver también
 
 - [`estructuras.md`](estructuras.md) — diseño de las tablas/directorio que cada punto neurálgico lee o escribe.
-- [`cubo_semantico.md`](cubo_semantico.md) — la tabla de tipos que se consultará en los puntos neurálgicos de Entrega 3.
+- [`memoria_ejecucion.md`](memoria_ejecucion.md) — cómo la VM usa el Goto inicial para arrancar en el lugar correcto.
+- [`cubo_semantico.md`](cubo_semantico.md) — la tabla de tipos que se consulta en los puntos neurálgicos de Entrega 3.
 - [`gramatica.md`](gramatica.md) — las producciones (`asigna`, `llamada`, `factor`, etc.) que disparan cada `Enter…`.
 - [`pruebas.md`](pruebas.md) — pruebas end-to-end que validan cada uno de los puntos neurálgicos.

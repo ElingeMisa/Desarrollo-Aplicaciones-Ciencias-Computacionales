@@ -1,8 +1,8 @@
 # Documentación del Compilador Patito
 
-Compilador del lenguaje **Patito** — *Víctor Misael Escalante Alvarado, A01741176*.
+Compilador del lenguaje **Patito** — *Víctor Misael Escalante Alvarado, A01741176*. Entrega 5 (versión final).
 
-Esta carpeta contiene toda la documentación técnica del proyecto. Cada archivo está organizado por **tema** para que cualquier concepto se pueda consultar en un solo lugar
+Esta carpeta contiene toda la documentación técnica del proyecto. Cada archivo está organizado por **tema** para que cualquier concepto se pueda consultar en un solo lugar.
 
 > El repositorio acompañante se encuentra en
 > <https://github.com/ElingeMisa/Desarrollo-Aplicaciones-Ciencias-Computacionales>.
@@ -28,22 +28,28 @@ Esta carpeta contiene toda la documentación técnica del proyecto. Cada archivo
 | Documento                                                         | Contenido                                                                                                                                        |
 |-------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
 | [`cubo_semantico.md`](cubo_semantico.md)                          | Tabla de consideraciones semánticas: combinación tipo × operador × tipo → resultado.                                                             |
-| [`estructuras.md`](estructuras.md)                                | Diseño de `VariableTable`, `Symbol`, `FunctionInfo` y `FunctionDirectory` (Entrega 2) y de `PilaOperadores`, `PilaOperandos`, `PilaTipos`, `FilaCuadruplos` y `QuadrupleEmitter` (Entrega 3), con justificación de cada elección y ciclo de vida completo. |
+| [`estructuras.md`](estructuras.md)                                | Diseño de `VariableTable`, `Symbol`, `FunctionInfo` y `FunctionDirectory` (Entrega 2), de `PilaOperadores`, `PilaOperandos`, `PilaTipos`, `FilaCuadruplos` y `QuadrupleEmitter` (Entrega 3), y de `ExecutionMemory`, `ActivationRecord` y `VirtualMachine` (Entrega 5). |
 | [`directorio_y_tablas.md`](directorio_y_tablas.md)                | Descripción de las estructuras que representan el Directorio de Funciones y las Tablas de Variables: campos, operaciones y ejemplo concreto de poblado a partir de código fuente. |
-| [`puntos_neuralgicos.md`](puntos_neuralgicos.md)                  | Recorrido del árbol con ANTLR4: mapeo de cada `Enter…`/`Exit…` del listener a su acción semántica (PN-1 a PN-7, Entrega 2) y a su acción de generación de cuádruplos (PN-8 a PN-18, Entrega 3). |
+| [`puntos_neuralgicos.md`](puntos_neuralgicos.md)                  | Recorrido del árbol con ANTLR4: mapeo de cada `Enter…`/`Exit…` del listener a su acción semántica (PN-1 a PN-7, Entrega 2), a su acción de generación de cuádruplos (PN-8 a PN-18, Entregas 3 y 4) y al Goto inicial que habilita la VM (PN-0, Entrega 5). |
 
 ### Generación de código intermedio (Entregas 3 y 4)
 
-| Documento                                              | Contenido                                                                                                                                                              |
-|--------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`cuadruplos.md`](cuadruplos.md)                       | Algoritmo completo de traducción a cuádruplos: formato `Quadruple`/`QuadOp`, algoritmos PN-8 a PN-18 con pseudocódigo y trazas de pilas, mecanismo de Backfill, ERA/EndFunc y ejemplos para cinco programas. |
-| [`direcciones_virtuales.md`](direcciones_virtuales.md) | Distribución de Direcciones Virtuales: mapa de memoria con diez segmentos iniciando en 18 000, API de `VirtualMemoryMap` y adelanto de la traducción en Entrega 5.     |
+| Documento | Contenido |
+|-----------|-----------|
+| [`cuadruplos.md`](cuadruplos.md) | Algoritmo completo de traducción a cuádruplos: formato `Quadruple`/`QuadOp`, algoritmos PN-8 a PN-18 con pseudocódigo y trazas de pilas, mecanismo de Backfill, ERA/EndFunc y el Goto inicial que separa funciones del `inicio{}`. |
+| [`direcciones_virtuales.md`](direcciones_virtuales.md) | Distribución de Direcciones Virtuales: mapa de memoria con diez segmentos iniciando en 18 000, API de `VirtualMemoryMap`, `AddressBook`, pool de constantes y `ResetTemps`. |
+
+### Máquina Virtual (Entrega 5)
+
+| Documento | Contenido |
+|-----------|-----------|
+| [`memoria_ejecucion.md`](memoria_ejecucion.md) | Diseño de la Memoria de Ejecución: `ExecutionMemory`, `ActivationRecord`, `VirtualMachine`. Cómo las direcciones virtuales indexan la memoria. Diagrama del call stack. Soporte completo de `QuadOp`. |
 
 ### Calidad y verificación
 
-| Documento                            | Contenido                                                                                          |
-|--------------------------------------|----------------------------------------------------------------------------------------------------|
-| [`pruebas.md`](pruebas.md)           | Plan de pruebas consolidado: casos de scanner, parser, semántica y generación de código con sus resultados esperados. |
+| Documento | Contenido |
+|-----------|-----------|
+| [`pruebas.md`](pruebas.md) | Plan de pruebas consolidado: casos de scanner, parser, semántica, generación de código y test cases de la VM (TC-VM-01 a TC-VM-07). |
 
 ## Mapa por entrega
 
@@ -56,7 +62,7 @@ Si lo que buscas es el material que corresponde a una **entrega específica**, e
 | **Entrega 2** — Análisis semántico         | [`cubo_semantico.md`](cubo_semantico.md), [`estructuras.md`](estructuras.md) (§ Entrega 2), [`directorio_y_tablas.md`](directorio_y_tablas.md), [`puntos_neuralgicos.md`](puntos_neuralgicos.md) (§ Entregas 2), [`pruebas.md`](pruebas.md). |
 | **Entrega 3** — Generación de cuádruplos  | [`cuadruplos.md`](cuadruplos.md), [`estructuras.md`](estructuras.md) (§ Entrega 3), [`puntos_neuralgicos.md`](puntos_neuralgicos.md) (§ Entrega 3), [`pruebas.md`](pruebas.md) (§ `CodeGenTests`). |
 | **Entrega 4** — Funciones completas       | [`cuadruplos.md`](cuadruplos.md) (§ Entrega 4), [`puntos_neuralgicos.md`](puntos_neuralgicos.md) (§ Entrega 4), [`direcciones_virtuales.md`](direcciones_virtuales.md), [`pruebas.md`](pruebas.md). |
-| **Entrega 5** — Direcciones virtuales     | [`direcciones_virtuales.md`](direcciones_virtuales.md) — implementación completa: `AddressBook`, pool de constantes, `ResetTemps`, formato `DIR(NOMBRE)` en cuádruplos. |
+| **Entrega 5** — Direcciones virtuales + VM | [`direcciones_virtuales.md`](direcciones_virtuales.md) (implementación completa: `AddressBook`, pool de constantes, `ResetTemps`), [`memoria_ejecucion.md`](memoria_ejecucion.md) (VM: `ExecutionMemory`, `ActivationRecord`, `VirtualMachine`), [`puntos_neuralgicos.md`](puntos_neuralgicos.md) (§ PN-0), [`pruebas.md`](pruebas.md) (§ TC-VM). |
 
 ## Convenciones
 

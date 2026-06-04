@@ -4,7 +4,7 @@
 
 Una **dirección virtual** es un número entero que identifica unívocamente una celda de memoria durante la ejecución de un programa Patito. La máquina virtual no trabaja con nombres de variables (`a`, `resultado`, `t0`) sino con sus direcciones. El compilador asigna una dirección a cada símbolo durante la fase semántica y la registra en el **libro de direcciones** (`AddressBook`).
 
-> **Estado de implementación:** La asignación de direcciones está **completamente implementada** (Entrega 5). Los cuádruplos internamente siguen usando nombres de símbolos (para compatibilidad con los tests y la fase de backfill), pero el módulo de impresión formatea cada operando como `DIR(NOMBRE)` usando el `AddressBook`.
+> **Estado de implementación (Entrega 5 — completa):** La asignación de direcciones está completamente implementada. Los cuádruplos internamente siguen usando nombres de símbolos (para compatibilidad con los tests y la fase de backfill), pero el módulo de impresión formatea cada operando como `DIR(NOMBRE)` usando el `AddressBook`. La **Máquina Virtual** usa estas mismas direcciones para indexar `ExecutionMemory` en tiempo de ejecución — ver [`memoria_ejecucion.md`](memoria_ejecucion.md).
 
 ---
 
