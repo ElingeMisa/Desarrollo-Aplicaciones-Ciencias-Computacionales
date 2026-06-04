@@ -22,7 +22,7 @@
 //    34
 // =============================================================================
 
-programa retorno_global;
+programa retornoGlobal;
 
 vars
     retval, a, b, suma: entero;
