@@ -24,7 +24,7 @@
 //    fin
 // =============================================================================
 
-programa vm_demo;
+programa vmDemo;
 
 vars
     n, acum: entero;
