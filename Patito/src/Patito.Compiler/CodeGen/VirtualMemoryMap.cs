@@ -1,19 +1,13 @@
-// =============================================================================
+// 
 //  VirtualMemoryMap.cs - Distribucion de Direcciones Virtuales de Patito.
 //  Autor: Victor Misael Escalante Alvarado, A01741176
-// =============================================================================
+// 
 //
 //  Define los segmentos de memoria virtual del compilador Patito.
 //  Cada segmento tiene un rango fijo de 1 000 direcciones, lo que garantiza
 //  un techo maximo claro de 1 000 simbolos por categoria y permite detectar
 //  desbordamiento con una comparacion simple.
 //
-//  Nota de diseno (Entrega 4):
-//    La asignacion de direcciones a simbolos concretos (variables, constantes
-//    y temporales) es trabajo de la Entrega 5. Por ahora este archivo define
-//    la ESTRUCTURA del mapa y expone los metodos de consulta y de asignacion
-//    por tipo/alcance para que los algoritmos futuros los usen sin conocer
-//    los rangos concretos.
 //
 //  Distribucion (base 18 000):
 //  ┌──────────────────────────┬─────────┬─────────┬────────┐
@@ -30,7 +24,7 @@
 //  │ Constante – Flotante     │ 26 000  │ 26 999  │ 1 000  │
 //  │ Constante – Cadena       │ 27 000  │ 27 999  │ 1 000  │
 //  └──────────────────────────┴─────────┴─────────┴────────┘
-// =============================================================================
+// 
 
 using Patito.Compiler.Semantic;
 
@@ -81,9 +75,9 @@ public sealed class VirtualMemoryMap
     // ── Instancia compartida (singleton sin estado para solo leer rangos) ─
     public static VirtualMemoryMap Default { get; } = new();
 
-    // =========================================================================
+    // =
     //  Consulta de rangos
-    // =========================================================================
+    // =
 
     /// <summary>
     /// Devuelve la direccion base del segmento indicado.
@@ -125,9 +119,9 @@ public sealed class VirtualMemoryMap
         return null;
     }
 
-    // =========================================================================
+    // =
     //  Asignacion de direcciones (preparacion para Entrega 5)
-    // =========================================================================
+    // =
 
     /// <summary>
     /// Asigna la siguiente direccion disponible en el segmento indicado.
@@ -199,9 +193,9 @@ public sealed class VirtualMemoryMap
         _counters[(int)MemorySegment.TempBool]  = 0;
     }
 
-    // =========================================================================
+    // =
     //  Representacion imprimible (para debug y documentacion)
-    // =========================================================================
+    // =
 
     public override string ToString()
     {

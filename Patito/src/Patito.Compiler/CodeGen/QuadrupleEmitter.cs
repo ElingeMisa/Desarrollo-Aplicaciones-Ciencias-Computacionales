@@ -17,11 +17,6 @@
 //    * Asignar una direccion virtual a cada variable, constante y temporal.
 //    * Deduplicar constantes: la misma literal siempre obtiene la misma dir.
 //    * Imprimir cuadruplos con el formato  DIR(NOMBRE)  en cada operando.
-//
-//  El contador de temporales (_tempCounter) sigue generando nombres unicos
-//  globales "t0", "t1", ... para facilitar la lectura; las direcciones
-//  virtuales se reinician por funcion (via ResetTemps()) porque cada
-//  activacion recibe su propio espacio de temporales.
 // =============================================================================
 
 using System.Collections.Generic;
@@ -48,9 +43,7 @@ public sealed class QuadrupleEmitter
     //  Libro de direcciones: nombre a  direccion virtual 
     private readonly Dictionary<string, int> _addressBook = new();
 
-    // =========================================================================
     //  Propiedades publicas
-    // =========================================================================
 
     /// <summary>Pila de operadores pendientes.</summary>
     public PilaOperadores Operadores { get; } = new();
@@ -72,9 +65,7 @@ public sealed class QuadrupleEmitter
     /// </summary>
     public IReadOnlyDictionary<string, int> AddressBook => _addressBook;
 
-    // =========================================================================
     //  Asignacion de direcciones (Entrega 5)
-    // =========================================================================
 
     /// <summary>
     /// Asigna una direccion virtual para una variable (global o local) y la
@@ -145,9 +136,7 @@ public sealed class QuadrupleEmitter
     /// </summary>
     public void ResetTemps() => _map.ResetTemps();
 
-    // =========================================================================
     //  Valores de constantes (Entrega 5 — VM)
-    // =========================================================================
 
     /// <summary>
     /// Construye un diccionario  direccion a  valor real  con todas las
@@ -191,9 +180,7 @@ public sealed class QuadrupleEmitter
         return result;
     }
 
-    // =========================================================================
     //  Generacion de temporales
-    // =========================================================================
 
     /// <summary>
     /// Genera un nombre de temporal unico ("t0", "t1", …), le asigna una
@@ -207,9 +194,7 @@ public sealed class QuadrupleEmitter
         return name;
     }
 
-    // =========================================================================
     //  API de pilas
-    // =========================================================================
 
     /// <summary>
     /// Apila un par (nombre, tipo) en PilaOperandos y PilaTipos simultaneamente.
@@ -221,10 +206,7 @@ public sealed class QuadrupleEmitter
         Tipos.Push(type);
     }
 
-    // =========================================================================
     //  Emision de cuadruplos binarios
-    // =========================================================================
-
     /// <summary>
     /// Extrae el operador del tope de <see cref="Operadores"/> y los dos operandos
     /// del tope de <see cref="Operandos"/> / <see cref="Tipos"/>, consulta el cubo
@@ -248,9 +230,7 @@ public sealed class QuadrupleEmitter
         return (temp, resultType);
     }
 
-    // -------------------------------------------------------------------------
     //  Conversion QuadOp <-> SemanticOp
-    // -------------------------------------------------------------------------
     private static SemanticOp ToSemanticOp(QuadOp op) => op switch
     {
         QuadOp.Plus   => SemanticOp.Plus,

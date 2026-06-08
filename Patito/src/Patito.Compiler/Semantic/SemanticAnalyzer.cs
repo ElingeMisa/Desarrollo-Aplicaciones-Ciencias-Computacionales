@@ -1,14 +1,8 @@
-// =============================================================================
+// ===
 //  SemanticAnalyzer.cs - Listener con los "puntos neuralgicos" semanticos.
 //  Autor: Victor Misael Escalante Alvarado, A01741176
-// =============================================================================
+// ===
 //
-//  Que es un "punto neuralgico"?
-//
-//      Un punto neuralgico es un instante especifico durante el recorrido del
-//      arbol de derivacion en el que el compilador realiza una accion
-//      semantica (registrar un simbolo, validar tipos, emitir un cuadruplo,
-//      etc.). En la implementacion via ANTLR4, cada metodo Enter/Exit de un
 //      Listener es candidato a contener un punto neuralgico.
 //
 //  Puntos neuralgicos implementados en Entrega 2 (declaraciones):
@@ -60,7 +54,7 @@
 //                                       que obtenga (y deduplique) su direccion.
 //      [PN-13] ExitImp (ampliado)    : registra literales de cadena (LETRERO)
 //                                       en el segmento Const-Cadena.
-// =============================================================================
+// ===
 
 using System.Collections.Generic;
 using Antlr4.Runtime.Tree;
@@ -84,7 +78,6 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
     // Indice del Goto inicial que salta sobre los cuerpos de funcion al inicio{}.
     private int _mainGotoIdx = -1;
 
-    // --- Estructuras de Entrega 3 -------------------------------------------
     // Emitter que agrupa las tres pilas (Operadores, Operandos, Tipos) y la
     // fila de cuadruplos.
     private readonly QuadrupleEmitter _emitter = new();
@@ -94,7 +87,7 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
     private readonly Stack<int> _pendingGoto  = new(); // indices de Goto (entre si y sino)
     private readonly Stack<int> _cicloStart   = new(); // indice de inicio de cada mientras
 
-    // ---- API publica ----------------------------------------------------------
+    // - API publica -
     public FunctionDirectory Directory  => _directory;
     public VariableTable GlobalTable    => _directory.GlobalTable;
     public IReadOnlyList<SemanticError> Errors => _errors;
@@ -104,9 +97,9 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
     public QuadrupleEmitter Emitter     => _emitter;
     public IReadOnlyList<Quadruple> Quads => _emitter.Fila.Quads;
 
-    // ==========================================================================
+    // 
     //  [PN-1] EnterPrograma: pasada de declaraciones (PN-2 y PN-3).
-    // ==========================================================================
+    // 
     public override void EnterPrograma(PatitoParser.ProgramaContext ctx)
     {
         var idNode = ctx.ID();
@@ -127,11 +120,11 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         _mainGotoIdx = _emitter.Fila.Emit(QuadOp.Goto, null, null, "?");
     }
 
-    // ==========================================================================
+    // 
     //  [PN-2] ProcessVars: registra cada ID en la tabla con validacion.
     //  [Entrega 5] Propaga isGlobal para que DeclareVariable asigne la
     //  direccion virtual correcta (segmento Global o Local segun el alcance).
-    // ==========================================================================
+    // 
     private void ProcessVars(PatitoParser.VarsContext varsCtx, VariableTable table, bool isGlobal)
     {
         var listado = varsCtx.listado_vars();
@@ -177,9 +170,9 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         }
     }
 
-    // ==========================================================================
+    // 
     //  [PN-3] ProcessFuncs: registra cada funcion con params y locales.
-    // ==========================================================================
+    // 
     private void ProcessFuncs(PatitoParser.FuncsContext funcsCtx)
     {
         var idArray = funcsCtx.ID();
@@ -247,25 +240,25 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         }
     }
 
-    // ==========================================================================
+    // 
     //  [PN-0b] EnterCuerpo: si el padre es ProgramaContext, este es el cuerpo
     //          del inicio{}. Hacer backfill del Goto inicial para que la VM
     //          arranque directamente aqui.
-    // ==========================================================================
+    // 
     public override void EnterCuerpo(PatitoParser.CuerpoContext ctx)
     {
         if (ctx.Parent is PatitoParser.ProgramaContext && _mainGotoIdx >= 0)
             _emitter.Fila.Backfill(_mainGotoIdx, _emitter.Fila.Count.ToString());
     }
 
-    // ==========================================================================
+    // 
     //  [PN-7] Manejo del alcance activo (push/pop) + StartQuad + EndFunc.
     //
     //   EnterFunc_body: registra el indice de inicio del cuerpo de la funcion
     //   en FunctionInfo.StartQuad (PN-7b).
     //   ExitFunc_body:  emite EndFunc para que la maquina virtual sepa donde
     //   termina la funcion y pueda restaurar el contexto (PN-7c).
-    // ==========================================================================
+    // 
     public override void EnterFunc_body(PatitoParser.Func_bodyContext ctx)
     {
         if (_funcByBody.TryGetValue(ctx, out var info))
@@ -299,9 +292,9 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         return _directory.GlobalTable.Lookup(name);
     }
 
-    // ==========================================================================
+    // 
     //  [PN-4] EnterAsigna : valida que el ID destino exista.
-    // ==========================================================================
+    // 
     public override void EnterAsigna(PatitoParser.AsignaContext ctx)
     {
         var idNode = ctx.ID();
@@ -316,9 +309,9 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         }
     }
 
-    // ==========================================================================
+    // 
     //  [PN-5] EnterFactorSimple : valida que un ID en una expresion exista.
-    // ==========================================================================
+    // 
     public override void EnterFactorSimple(PatitoParser.FactorSimpleContext ctx)
     {
         var atom = ctx.simple_atom();
@@ -336,9 +329,9 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         }
     }
 
-    // ==========================================================================
+    // 
     //  [PN-6] EnterLlamada : valida que la funcion invocada exista.
-    // ==========================================================================
+    // 
     public override void EnterLlamada(PatitoParser.LlamadaContext ctx)
     {
         var id = ctx.ID();
@@ -353,9 +346,9 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         }
     }
 
-    // ==========================================================================
+    // 
     //  [PN-8] ExitFactorSimple : apila el operando y su tipo.
-    // ==========================================================================
+    // 
     public override void ExitFactorSimple(PatitoParser.FactorSimpleContext ctx)
     {
         var atom = ctx.simple_atom();
@@ -411,9 +404,9 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         _emitter.PushOperand(name, type);
     }
 
-    // ==========================================================================
+    // 
     //  [PN-9] ExitTermino : aplica * y / (mayor precedencia).
-    // ==========================================================================
+    // 
     public override void ExitTermino(PatitoParser.TerminoContext ctx)
     {
         int n = ctx.factor().Length;
@@ -464,9 +457,9 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         _emitter.PushOperand(leftName, leftType);
     }
 
-    // ==========================================================================
+    // 
     //  [PN-10] ExitExp : aplica + y - (menor precedencia que * /).
-    // ==========================================================================
+    // 
     public override void ExitExp(PatitoParser.ExpContext ctx)
     {
         int n = ctx.termino().Length;
@@ -514,10 +507,10 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         _emitter.PushOperand(leftName, leftType);
     }
 
-    // ==========================================================================
+    // 
     //  [PN-11] ExitExpresion : aplica operador relacional si lo hay y, si la
     //          expresion es condicion de un si/mientras, emite GotoF.
-    // ==========================================================================
+    // 
     public override void ExitExpresion(PatitoParser.ExpresionContext ctx)
     {
         if (ctx.rel_op() is not null)
@@ -566,9 +559,9 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         _pendingGotoF.Push(gfIdx);
     }
 
-    // ==========================================================================
+    // 
     //  [PN-12] ExitAsigna : valida tipos con el cubo y emite Assign.
-    // ==========================================================================
+    // 
     public override void ExitAsigna(PatitoParser.AsignaContext ctx)
     {
         var idNode = ctx.ID();
@@ -597,9 +590,9 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         _emitter.Fila.Emit(QuadOp.Assign, exprName, null, destName);
     }
 
-    // ==========================================================================
+    // 
     //  [PN-13] ExitImp : emite Print para cada elemento de escribe().
-    // ==========================================================================
+    // 
     public override void ExitImp(PatitoParser.ImpContext ctx)
     {
         if (ctx.LETRERO() is not null)
@@ -618,18 +611,18 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         }
     }
 
-    // ==========================================================================
+    // 
     //  [PN-14] EnterCiclo : guarda el indice de inicio del ciclo.
-    // ==========================================================================
+    // 
     public override void EnterCiclo(PatitoParser.CicloContext ctx)
     {
         _cicloStart.Push(_emitter.Fila.Count);
     }
 
-    // ==========================================================================
+    // 
     //  [PN-15] ExitCuerpo : al salir del cuerpo-si (cuando hay sino) emite
     //          Goto y hace Backfill del GotoF hacia el inicio del sino.
-    // ==========================================================================
+    // 
     public override void ExitCuerpo(PatitoParser.CuerpoContext ctx)
     {
         if (ctx.Parent is not PatitoParser.CondicionContext condCtx) return;
@@ -648,10 +641,10 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         }
     }
 
-    // ==========================================================================
+    // 
     //  [PN-16] ExitCondicion : hace Backfill del Goto (con sino) o del GotoF
     //          (sin sino) al final del estatuto completo.
-    // ==========================================================================
+    // 
     public override void ExitCondicion(PatitoParser.CondicionContext ctx)
     {
         int current = _emitter.Fila.Count;
@@ -669,9 +662,9 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         }
     }
 
-    // ==========================================================================
+    // 
     //  [PN-17] ExitCiclo : emite Goto al inicio y resuelve el GotoF.
-    // ==========================================================================
+    // 
     public override void ExitCiclo(PatitoParser.CicloContext ctx)
     {
         if (_cicloStart.Count > 0)
@@ -681,12 +674,12 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
             _emitter.Fila.Backfill(_pendingGotoF.Pop(), _emitter.Fila.Count.ToString());
     }
 
-    // ==========================================================================
+    // 
     //  [PN-19] ExitRetorno : valida que 'regresa <expr>;' aparezca dentro de
     //          una funcion con tipo de retorno distinto de 'nula' y que el
     //          tipo de la expresion sea compatible (cubo semantico, regla
     //          Assign). Emite (Return, exprName, null, "{func}_ret").
-    // ==========================================================================
+    // 
     public override void ExitRetorno(PatitoParser.RetornoContext ctx)
     {
         // La expresion siempre deja un resultado en las pilas; sacarlo incluso
@@ -728,7 +721,7 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         _emitter.Fila.Emit(QuadOp.Return, exprName, null, $"{current.Name}_ret");
     }
 
-    // ==========================================================================
+    // 
     //  [PN-18] ExitCall_stmt : emite ERA + Param (por cada arg) + Gosub.
     //
     //  Secuencia de cuadruplos para f(a, b):
@@ -736,7 +729,7 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
     //    Param  _  _  a        <- pasa cada argumento en orden
     //    Param  _  _  b
     //    Gosub  f  _  startQ   <- transfiere control; Result = indice de inicio
-    // ==========================================================================
+    // 
     public override void ExitCall_stmt(PatitoParser.Call_stmtContext ctx)
     {
         var llamada = ctx.llamada();
@@ -747,7 +740,7 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         EmitCallSequence(funcName, llamada.args()?.expresion()?.Length ?? 0);
     }
 
-    // ==========================================================================
+    // 
     //  FactorLlamada: funcion invocada como operando dentro de una expresion.
     //  Emite ERA+Param+Gosub y luego copia "{func}_ret" (la direccion global
     //  reservada para el valor de retorno) a un TEMPORAL fresco antes de
@@ -756,7 +749,7 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
     //  dos llamadas comparten la direccion "{func}_ret"; copiar de inmediato a
     //  un temporal distinto evita que la segunda llamada sobreescriba el
     //  resultado de la primera antes de combinarlos.
-    // ==========================================================================
+    // 
     public override void ExitFactorLlamada(PatitoParser.FactorLlamadaContext ctx)
     {
         var llamada = ctx.llamada();
@@ -785,9 +778,9 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         _emitter.PushOperand(temp, returnType);
     }
 
-    // ==========================================================================
+    // 
     //  Helper: emite ERA + Param* + Gosub para cualquier llamada a funcion.
-    // ==========================================================================
+    // 
     private void EmitCallSequence(string funcName, int nArgs)
     {
         // Los argumentos ya fueron evaluados; sus nombres estan en las pilas
@@ -814,9 +807,9 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
         _emitter.Fila.Emit(QuadOp.Gosub, funcName, null, startQuad);
     }
 
-    // ==========================================================================
+    // 
     //  Helpers para traducir contextos de tipo en SemanticType.
-    // ==========================================================================
+    // 
     private static SemanticType ParseTipo(PatitoParser.TipoContext ctx)
     {
         if (ctx is null) return SemanticType.Error;

@@ -6,17 +6,7 @@
 //  La VM recibe la lista de cuadruplos generada por el compilador y los
 //  ejecuta secuencialmente, modificando el contador de programa (pc) cuando
 //  encuentra saltos.
-//
-//  Modelo de memoria:
-//  ┌─────────────────────────────────────────────────────────────────────┐
-//  │ Segmento            │ Rango          │ Almacen               │      │
-//  ├─────────────────────┼────────────────┼───────────────────────┤      │
-//  │ GlobalInt/Float     │ 18000-19999    │ _globalMemory         │ R/W  │
-//  │ LocalInt/Float      │ 20000-21999    │ _activeLocal (frame)  │ R/W  │
-//  │ TempInt/Float/Bool  │ 22000-24999    │ _activeLocal (frame)  │ R/W  │
-//  │ ConstInt/Float/Str  │ 25000-27999    │ _globalMemory         │ R    │
-//  └─────────────────────┴────────────────┴───────────────────────┴──────┘
-//
+
 //  Al iniciar:
 //    * Las constantes (25000-27999) se cargan en _globalMemory desde
 //      el diccionario constValues  (address -> valor real).
@@ -55,7 +45,7 @@ public sealed class VirtualMachine
     private readonly FunctionDirectory _funcDir;
     private readonly TextWriter? _output;
 
-    // ── Memoria ───────────────────────────────────────────────────────────
+    //  Memoria ─
     // Global: variables globales (18000-19999) y constantes (25000-27999).
     private readonly ExecutionMemory _globalMemory = new();
 
@@ -65,7 +55,7 @@ public sealed class VirtualMachine
     // Pila de llamadas: (indice de retorno, memoria local guardada).
     private readonly Stack<(int returnPc, ExecutionMemory savedLocal)> _callStack = new();
 
-    // ── Estado de llamada pendiente (ERA -> Param* -> Gosub) ──────────────
+    //  Estado de llamada pendiente (ERA -> Param* -> Gosub) 
     private ActivationRecord? _pendingRecord;
     private int _argCounter;
 
@@ -145,7 +135,7 @@ public sealed class VirtualMachine
     {
         switch (q.Op)
         {
-            // ── Aritmeticos ──────────────────────────────────────────────────
+            //  Aritmeticos 
             case QuadOp.Plus:
                 SetValue(q.Result, ArithAdd(GetValue(q.Left!), GetValue(q.Right!)));
                 return pc + 1;
@@ -162,7 +152,7 @@ public sealed class VirtualMachine
                 SetValue(q.Result, ArithDiv(GetValue(q.Left!), GetValue(q.Right!)));
                 return pc + 1;
 
-            // ── Relacionales ─────────────────────────────────────────────────
+            //  Relacionales ─
             case QuadOp.Lt:
                 SetValue(q.Result, RelCompare(GetValue(q.Left!), GetValue(q.Right!)) < 0);
                 return pc + 1;
@@ -179,7 +169,7 @@ public sealed class VirtualMachine
                 SetValue(q.Result, RelCompare(GetValue(q.Left!), GetValue(q.Right!)) != 0);
                 return pc + 1;
 
-            // ── Asignacion y negacion ─────────────────────────────────────────
+            //  Asignacion y negacion ─
             case QuadOp.Assign:
                 SetValue(q.Result, GetValue(q.Left!));
                 return pc + 1;
@@ -189,7 +179,7 @@ public sealed class VirtualMachine
                 SetValue(q.Result, Negate(GetValue(q.Right!)));
                 return pc + 1;
 
-            // ── Saltos ───────────────────────────────────────────────────────
+            //  Saltos ─
             case QuadOp.GotoF:
             {
                 var cond = GetValue(q.Left!);
@@ -200,7 +190,7 @@ public sealed class VirtualMachine
             case QuadOp.Goto:
                 return int.Parse(q.Result);
 
-            // ── Salida ───────────────────────────────────────────────────────
+            //  Salida ─
             case QuadOp.Print:
             {
                 string text = FormatForPrint(q.Result);
@@ -209,7 +199,7 @@ public sealed class VirtualMachine
                 return pc + 1;
             }
 
-            // ── Funciones ────────────────────────────────────────────────────
+            //  Funciones 
             case QuadOp.Era:
                 _pendingRecord = new ActivationRecord(q.Result);
                 _argCounter    = 0;
@@ -225,7 +215,7 @@ public sealed class VirtualMachine
             case QuadOp.EndFunc:
                 return ExecuteEndFunc();
 
-            // ── Retorno de funciones ─────────────────────────────────────────
+            //  Retorno de funciones ─
             case QuadOp.Return:
                 // (Return, exprName, null, "{func}_ret"): copia el valor de
                 // 'exprName' (en el frame activo de la funcion) a la direccion

@@ -72,7 +72,7 @@ public sealed class SemanticCube
     public bool IsCompatible(SemanticType left, SemanticOp op, SemanticType right)
         => Resolve(left, op, right) != SemanticType.Error;
 
-    /// <summary>Numero total de celdas validas (util para tests).</summary>
+    /// <summary>Numero total de celdas validas (para tests).</summary>
     public int RuleCount => _rules.Count;
 
     /// <summary>
@@ -81,14 +81,14 @@ public sealed class SemanticCube
     /// </summary>
     public static readonly SemanticCube Default = Build();
 
-    // -------------------------------------------------------------------------
+    //
     //  Construccion de las reglas. Se hace una sola vez (estatico).
-    // -------------------------------------------------------------------------
+    //
     private static SemanticCube Build()
     {
         var r = new Dictionary<(SemanticType, SemanticOp, SemanticType), SemanticType>();
 
-        // ----- Aritmeticos +, -, * ----------------------------------------------
+        // Aritmeticos +, -, * 
         // Promocion: si alguno es flotante el resultado es flotante.
         foreach (var op in new[] { SemanticOp.Plus, SemanticOp.Minus, SemanticOp.Times })
         {
@@ -98,7 +98,7 @@ public sealed class SemanticCube
             r[(SemanticType.Flotante, op, SemanticType.Flotante)] = SemanticType.Flotante;
         }
 
-        // ----- Division ---------------------------------------------------------
+        // Division -
         // Regla de diseño documentada: la division SIEMPRE produce flotante,
         // incluso entre dos enteros (para evitar perdida silenciosa de la parte
         // fraccionaria, que es una fuente clasica de bugs).
@@ -107,7 +107,7 @@ public sealed class SemanticCube
         r[(SemanticType.Flotante, SemanticOp.Divide, SemanticType.Entero)]   = SemanticType.Flotante;
         r[(SemanticType.Flotante, SemanticOp.Divide, SemanticType.Flotante)] = SemanticType.Flotante;
 
-        // ----- Relacionales <, >, ==, != ---------------------------------------
+        // Relacionales <, >, ==, != -
         // Resultado siempre Bool cuando ambos operandos son numericos.
         foreach (var op in new[] { SemanticOp.Lt, SemanticOp.Gt, SemanticOp.Eq, SemanticOp.Neq })
         {
@@ -117,7 +117,7 @@ public sealed class SemanticCube
             r[(SemanticType.Flotante, op, SemanticType.Flotante)] = SemanticType.Bool;
         }
 
-        // ----- Asignacion =  (destino, op, fuente) -----------------------------
+        // Asignacion =  (destino, op, fuente) -
         // El "izquierdo" es el TIPO del lvalue (variable destino) y el
         // "derecho" es el tipo de la expresion. Permitimos promocion
         // flotante <- entero, pero NO entero <- flotante.
