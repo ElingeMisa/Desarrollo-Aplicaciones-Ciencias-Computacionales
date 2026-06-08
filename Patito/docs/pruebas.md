@@ -335,7 +335,7 @@ dotnet test --filter "FullyQualifiedName!~QuadruplesDemoTests"
 
 ---
 
-## Test Cases de la VM (TC-VM-01 a TC-VM-07)
+## Test Cases de la VM (TC-VM-01 a TC-VM-09)
 
 Ubicados en [`VirtualMachineTests.cs`](../tests/Patito.Tests/VirtualMachineTests.cs).  
 El helper `Run(source)` compila y ejecuta la VM; los tests verifican `VmResult.Output`.
@@ -349,6 +349,8 @@ El helper `Run(source)` compila y ejecuta la VM; los tests verifican `VmResult.O
 | TC-VM-05 | Función void con parámetros | `nula imprimir(n: entero)` llamada con `a=99` y literal `7` | `ERA imprimir`, `Param _ _ a`, `Gosub imprimir startQ`, `EndFunc` | `valor:`, `99`, `valor:`, `7` | ✅ |
 | TC-VM-06 | Función con retorno vía global | `nula cuadrado(base: entero)` escribe `retval = base * base` | `Times base base t0`, `Assign t0 _ retval` | `36` (x=6), `9` (x=3) | ✅ |
 | TC-VM-07 | Aritmética mixta ent+flot | `a + b`, `a * b`, `f + 1.5` | `Plus a b t0`, `Times a b t1`, `Plus f 1.5 t2` | `13`, `30`, `4` | ✅ |
+| TC-VM-08 | `regresa` + llamada como factor | `entero doble(n)` con `regresa d;`; `resultado = doble(x) + 1;` y `doble(3) + doble(10)` | `Return d _ doble_ret`, `Gosub doble _ startQ`, `Assign doble_ret _ t0`, `Plus t0 1 t1` | `11` (doble(5)+1), `26` (doble(3)+doble(10)) | ✅ |
+| TC-VM-09 | Fibonacci recursivo con `regresa` | `entero fib(k)` recursiva, `valor = fib(k-1) + fib(k-2); regresa valor;` | dos `Gosub fib` dentro de una expresión + `Return valor _ fib_ret` | `21` (fib(8)) | ✅ |
 
 ### Notas de implementación
 
@@ -358,6 +360,8 @@ El helper `Run(source)` compila y ejecuta la VM; los tests verifican `VmResult.O
 - **TC-VM-05**: ejercita el protocolo ERA → Param → Gosub → EndFunc. El valor del parámetro se copia al `LocalMemory` del frame.
 - **TC-VM-06**: la función `cuadrado` escribe en la variable global `retval` porque no está sombreada por ninguna local. El llamador luego lee `retval` del scope global.
 - **TC-VM-07**: la promoción int→double ocurre automáticamente en los helpers `ArithAdd`, `ArithMul`. `4.0.ToString(InvariantCulture)` produce `"4"`.
+- **TC-VM-08**: cubre el camino completo de `regresa` (cuádruplo `Return` + dirección global `"{func}_ret"`) y, sobre todo, valida el **fix del bug de aliasing**: `doble(3) + doble(10)` debe dar `26` y no `40` — si `ExitFactorLlamada` reusara el placeholder compartido `"doble_ret"` como operando de la suma, el segundo `Gosub` pisaría el resultado del primero antes del `Plus`.
+- **TC-VM-09**: caso recursivo real (Fibonacci) que ejercita `regresa` dentro de `si/sino` y dos llamadas a la misma función (`fib(k-1) + fib(k-2)`) en cada nivel de recursión — el escenario exacto que el fix de aliasing de TC-VM-08 protege, ahora con profundidad de pila no trivial. `fib(8) = 21`.
 
 ---
 

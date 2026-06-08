@@ -183,8 +183,9 @@ Esta es la lista final, tal cual aparece en [`../src/Patito.Compiler/Patito.g4`]
 | `params`        | `ID COLON tipo (COMA ID COLON tipo)* \| /* vacío */`                              |
 | `func_body`     | `LBRACE vars estatuto* RBRACE`                                                    |
 | `cuerpo`        | `LBRACE estatuto* RBRACE`                                                         |
-| `estatuto`      | `asigna \| condicion \| ciclo \| imprime \| call_stmt`                             |
+| `estatuto`      | `asigna \| condicion \| ciclo \| imprime \| call_stmt \| retorno`                  |
 | `asigna`        | `ID OP_ASIGNA expresion SEMICOLON`                                                |
+| `retorno`       | `KW_REGRESA expresion SEMICOLON`  *(Entrega 6 — `regresa <expr>;`)*                |
 | `condicion`     | `KW_SI LPAREN expresion RPAREN cuerpo (KW_SINO cuerpo)? SEMICOLON`                |
 | `ciclo`         | `KW_MIENTRAS LPAREN expresion RPAREN KW_HAZ cuerpo SEMICOLON`                     |
 | `imprime`       | `KW_ESCRIBE LPAREN imp (COMA imp)* RPAREN SEMICOLON`                              |
@@ -215,7 +216,7 @@ Si en una futura entrega se necesita un AST compacto, la opción más natural es
 
 ## Puntos neurálgicos en la gramática (Entregas 2 y 3)
 
-La siguiente tabla muestra, para cada producción relevante, qué puntos neurálgicos se enganchan en ella y cuál es la acción que realizan. Los puntos PN-1..PN-7 corresponden a la Entrega 2 (declaraciones y validación de uso); los puntos PN-8..PN-18 corresponden a la Entrega 3 (generación de cuádruplos).
+La siguiente tabla muestra, para cada producción relevante, qué puntos neurálgicos se enganchan en ella y cuál es la acción que realizan. Los puntos PN-1..PN-7 corresponden a la Entrega 2 (declaraciones y validación de uso); los puntos PN-8..PN-18 corresponden a la Entrega 3 (generación de cuádruplos); el PN-19 corresponde a la Entrega 6 (sentencia `regresa` y direcciones de retorno).
 
 ```
 programa : KW_PROGRAMA ID SEMICOLON vars funcs KW_INICIO cuerpo KW_FIN
@@ -279,6 +280,10 @@ llamada : ID LPAREN args? RPAREN
 call_stmt : llamada SEMICOLON
                             ▲
                       PN-18 (ExitCall_stmt) — emite Param* + Gosub
+
+retorno : KW_REGRESA expresion SEMICOLON
+                                ▲
+                          PN-19 (ExitRetorno) — valida contexto/tipo, emite Return
 ```
 
 ### Leyenda de acciones
@@ -304,3 +309,4 @@ call_stmt : llamada SEMICOLON
 | PN-16  | `ExitCondicion`           | Hace `Backfill` del Goto (con sino) o del GotoF (sin sino). |
 | PN-17  | `ExitCiclo`               | Emite `Goto` al inicio y hace `Backfill` del GotoF. |
 | PN-18  | `ExitCall_stmt`           | Emite `Param` por cada arg y `Gosub`. |
+| PN-19  | `ExitRetorno`             | *(Entrega 6)* Valida que `regresa` esté dentro de una función no-`nula`, verifica el tipo con el cubo semántico y emite `Return(exprName, _, "{func}_ret")`. |

@@ -191,6 +191,7 @@ new VirtualMachine(
 | `Param` | Busca la dirección del parámetro formal en `funcDir.LocalTable`, llama `PushArg`. |
 | `Gosub` | `PopArgs()` → copia args a `LocalMemory`; push call stack; `_activeLocal = frame.LocalMemory`; `pc = startQuad`. |
 | `EndFunc` | Pop call stack; restaura `_activeLocal` y `pc`. |
+| `Return` | **[Entrega 6]** `SetValue(Result, GetValue(Left))` — copia el valor de la expresión de `regresa` a la dirección **global** `"{func}_ret"`. Es deliberadamente simétrico a `Assign`; lo único que cambia es la semántica del nombre destino (vive en `GlobalInt`/`GlobalFloat`, sobrevive al `EndFunc` que sigue). |
 
 ### Cómo las Direcciones Virtuales indexan la memoria
 
@@ -228,5 +229,5 @@ sealed record VmResult(
 
 - [`direcciones_virtuales.md`](direcciones_virtuales.md) — el mapa de segmentos y la API de `VirtualMemoryMap` que asigna cada dirección en compilación.
 - [`cuadruplos.md`](cuadruplos.md) — el formato y catálogo de los cuádruplos que la VM ejecuta.
-- [`puntos_neuralgicos.md`](puntos_neuralgicos.md) — especialmente PN-0 (Goto inicial) y PN-7b/PN-18 (funciones con direcciones virtuales).
-- [`pruebas.md`](pruebas.md) — test cases TC-VM-01 a TC-VM-07 que validan la VM de extremo a extremo.
+- [`puntos_neuralgicos.md`](puntos_neuralgicos.md) — especialmente PN-0 (Goto inicial), PN-7b/PN-18 (funciones con direcciones virtuales) y PN-19 (`regresa` y direcciones de retorno).
+- [`pruebas.md`](pruebas.md) — test cases TC-VM-01 a TC-VM-09 que validan la VM de extremo a extremo (TC-VM-08/09 cubren `regresa` y el fix de aliasing en llamadas recursivas).

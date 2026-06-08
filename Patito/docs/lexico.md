@@ -48,6 +48,7 @@ Cada palabra reservada representa una cadena de caracteres exacta y tiene **prio
 | `KW_MIENTRAS` | `mientras`  |
 | `KW_HAZ`      | `haz`       |
 | `KW_ESCRIBE`  | `escribe`   |
+| `KW_REGRESA`  | `regresa`   |
 
 El requisito de *longest-match* asegura que identificadores como `siempre` se reconozcan como `ID` y **no** como `KW_SI` seguido de `empre`; las pruebas `Identificador_NoColisionaConKeywords` y `PalabraReservada_SeReconoceComoKeyword` blindan ambos lados.
 
@@ -149,6 +150,7 @@ Esta es la tabla maestra que consume el parser. La columna **Categoría** ayuda 
 | `KW_MIENTRAS` | `"mientras"`         | Palabra reservada     |
 | `KW_HAZ`      | `"haz"`              | Palabra reservada     |
 | `KW_ESCRIBE`  | `"escribe"`          | Palabra reservada     |
+| `KW_REGRESA`  | `"regresa"`          | Palabra reservada     |
 | `ID`          | `letra alfanum*`     | Identificador         |
 | `CTE_ENT`     | `digito+`            | Constante entera      |
 | `CTE_FLOT`    | `digito+ "." digito+` | Constante flotante   |

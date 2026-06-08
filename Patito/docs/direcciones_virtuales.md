@@ -85,6 +85,8 @@ La misma literal (`"42"`, `"3.14"`, `"hola"`) siempre recibe la misma dirección
 | Literal de cadena en `escribe` | `AllocateStringConst` (pool, dedup) | Const-Cadena |
 | Temporal aritmético | `NewTemp(SemanticType)` en `EmitBinary` | Temp-Int / Temp-Float |
 | Temporal relacional | `NewTemp(SemanticType.Bool)` | Temp-Bool |
+| Dirección de retorno (`"{funcName}_ret"`) — *Entrega 6* | `ProcessFuncs` (PN-19a), vía `AllocateVariable(returnType, isGlobal: true)` | **Global**-Int / Global-Float |
+| Temporal de "llamada como factor" (anti-aliasing) — *Entrega 6* | `ExitFactorLlamada`, vía `NewTemp(returnType)` | Temp-Int / Temp-Float |
 
 ---
 
@@ -99,6 +101,10 @@ El libro se puebla de forma incremental:
 - `NewTemp(type)` — escribe el temporal generado en el libro.
 
 Los nombres de función (usados en `ERA`, `Gosub`, `EndFunc`) y los índices de salto (usados en `GotoF`/`Goto`) **no tienen dirección** en el libro y se imprimen sin prefijo.
+
+> **Nota — Entrega 6:** cada función con tipo de retorno distinto de `nula` registra una entrada adicional `"{funcName}_ret"` en el libro, apuntando a una dirección **Global** reservada en `ProcessFuncs` (PN-19a). Esta dirección recibe el valor producido por `regresa <expr>;` (cuádruplo `Return`) y es leída por el llamador justo después del `Gosub`. Vivir en Global —y no en el frame local de la función— es necesario porque `EndFunc` descarta la memoria local de la activación antes de que el llamador pueda consultar el resultado.
+
+> **Nota — fix de aliasing en `ExitFactorLlamada`:** si una expresión contiene dos llamadas a la misma función (`fib(k-1) + fib(k-2)`), ambas comparten la dirección `"{funcName}_ret"`. Empujar ese nombre directamente como operando de la suma causaría que el segundo `Gosub` sobrescribiera el resultado del primero antes de combinarlos. Por eso, inmediatamente después de cada `Gosub` se asigna un temporal de nombre único (`NewTemp(returnType)`) y se copia `"{funcName}_ret"` a él (`Assign`); ese temporal —no el placeholder compartido— es el que se apila como operando. Esto es seguro porque la VM ejecuta los cuádruplos estrictamente en secuencia: nada puede sobrescribir la dirección global entre el regreso del `Gosub` y la copia inmediata al temporal.
 
 ---
 
@@ -184,5 +190,5 @@ map.Reset();
 ## Ver también
 
 - [`estructuras.md`](estructuras.md) — la clase `Symbol` que lleva la dirección asignada (`Symbol.Address`).
-- [`puntos_neuralgicos.md`](puntos_neuralgicos.md) — PN-7b' (ResetTemps), PN-8 y PN-13 que registran constantes.
+- [`puntos_neuralgicos.md`](puntos_neuralgicos.md) — PN-7b' (ResetTemps), PN-8 y PN-13 que registran constantes, y PN-19/PN-19a (`regresa` y direcciones de retorno).
 - [`cuadruplos.md`](cuadruplos.md) — formato de la fila de cuádruplos y el flag `--quads`.

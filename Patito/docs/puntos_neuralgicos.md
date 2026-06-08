@@ -1,10 +1,10 @@
 # Puntos Neurálgicos del Análisis Semántico
 
-> Documentación actualizada a la **Entrega 5** del compilador. Ver el [índice general](README.md) para más contexto.
+> Documentación actualizada a la **Entrega 6** del compilador. Ver el [índice general](README.md) para más contexto.
 
 Un **punto neurálgico** es un instante específico durante el recorrido del árbol de derivación en el que el compilador realiza una acción semántica (registrar un símbolo, validar un tipo, emitir un cuadruplo, etc.). En la implementación con ANTLR4, cada método `EnterX`/`ExitX` del listener `SemanticAnalyzer` puede ser un punto neurálgico. Las reglas gramaticales en las que se enganchan estos métodos están detalladas en [`gramatica.md`](gramatica.md), y las estructuras que se llenan en cada punto, en [`estructuras.md`](estructuras.md).
 
-La siguiente tabla resume todos los puntos neurálgicos implementados, incluyendo el **PN-0** de la Entrega 5 que habilita la Máquina Virtual.
+La siguiente tabla resume todos los puntos neurálgicos implementados, incluyendo el **PN-0** de la Entrega 5 que habilita la Máquina Virtual y el **PN-19** de la Entrega 6 que agrega la sentencia `regresa`.
 
 | #     | Punto neurálgico         | Disparador en la gramática              | Acción semántica                                                              | Validaciones                                                                                        |
 |-------|--------------------------|------------------------------------------|-------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
@@ -18,6 +18,8 @@ La siguiente tabla resume todos los puntos neurálgicos implementados, incluyend
 | PN-7  | `EnterFunc_body` / `ExitFunc_body` | `func_body : { vars estatuto* }` | Empuja/saca la `FunctionInfo` activa de una pila de alcances, para que PN-4/PN-5 resuelvan locales antes que globales. | — (es estructural)                                                                                  |
 | PN-7b | `EnterFunc_body`                   | `func_body : { vars estatuto* }` | **[Entrega 4]** Registra `FunctionInfo.StartQuad = FilaCuadruplos.Count` justo antes de visitar el cuerpo. Ese índice es el punto de entrada al que apunta `Gosub`. | — |
 | PN-7c | `ExitFunc_body`                    | `func_body : { vars estatuto* }` | **[Entrega 4]** Emite `EndFunc(_, _, funcName)` al terminar el cuerpo para que la MV pueda restaurar el contexto de ejecución. | — |
+| PN-19a| `ProcessFuncs`                     | declaración de función no-`nula` | **[Entrega 6]** Reserva una dirección Global para `"{name}_ret"` (registrada en el `AddressBook`) y la guarda en `FunctionInfo.ReturnAddress`. | — |
+| PN-19 | `ExitRetorno`                      | `retorno : KW_REGRESA expresion SEMICOLON` | **[Entrega 6]** Resuelve tipo con `SemanticCube.Resolve(returnType, Assign, exprType)` y emite `Return(exprName, _, "{func}_ret")`. | **`regresa` fuera de una función** → `InvalidReturn`. **`regresa` en función `nula`** → `InvalidReturn`. **Tipo incompatible con el de retorno** → `TypeMismatch`. |
 
 ## Orden de ejecución
 
@@ -278,6 +280,123 @@ quad[N]   ...                    ← primer cuádruplo de inicio{} ← la VM emp
 ```
 
 Las funciones son alcanzables únicamente vía `Gosub`, que salta directamente a su `StartQuad`. El `Goto` inicial es inocuo en programas sin funciones (salta a N=1).
+
+---
+
+## PN-19 — `regresa <expr>;` y direcciones de retorno (Entrega 6)
+
+Este punto neurálgico cierra el ciclo de vida de las funciones: hasta antes de su implementación, una función con tipo de retorno distinto de `nula` podía usarse como factor en una expresión (`resultado = doble(x) + 1`), pero **no existía ninguna sentencia del lenguaje para producir ese valor de retorno** — el único mecanismo disponible era escribir manualmente en una variable global (patrón documentado en TC-VM-06). El generador de cuádruplos sí emitía un operando placeholder `"{funcName}_ret"` al salir de una llamada-como-factor, pero ese nombre **nunca se registraba en el `AddressBook`**, así que la VM tronaba con:
+
+```
+[VM ERROR] El nombre 'fib_ret' no tiene direccion virtual asignada.
+```
+
+### Causa raíz
+
+Faltaban tres piezas relacionadas:
+
+1. **Gramática**: no existía una producción `regresa expresion ;` que permitiera al programador asignar explícitamente el valor de retorno.
+2. **Direcciones**: nadie reservaba una dirección virtual para `"{funcName}_ret"`, ni en el `AddressBook` ni en ningún segmento de memoria.
+3. **Cuádruplo**: no existía una operación que copiara el valor de la expresión de `regresa` a esa dirección reservada.
+
+Adicionalmente, durante el diseño de la solución se detectó un **bug de aliasing latente**: si dos llamadas a la misma función aparecían en una sola expresión (`fib(k - 1) + fib(k - 2)`), reusar el mismo nombre `"{funcName}_ret"` como operando para ambas habría hecho que el segundo `Gosub` sobrescribiera el resultado del primero *antes* de que el `Plus` los combinara — produciendo un resultado incorrecto silenciosamente (no un crash).
+
+### Solución
+
+Se optó por la **opción completa**: agregar una sentencia `regresa` real al lenguaje, en vez de apoyarse únicamente en el patrón de variable global.
+
+1. **Gramática (`Patito.g4`)** — nueva palabra reservada `KW_REGRESA = 'regresa'` y nueva producción:
+
+   ```antlr
+   estatuto
+       : asigna | condicion | ciclo | imprime | call_stmt | retorno
+       ;
+
+   retorno
+       : KW_REGRESA expresion SEMICOLON
+       ;
+   ```
+
+2. **Reserva de dirección de retorno (PN-19a, en `ProcessFuncs`)** — al declarar cada función con tipo de retorno distinto de `Nula`, se reserva una dirección en el segmento **Global** (no Local) y se registra como `"{name}_ret"`:
+
+   ```csharp
+   if (returnType != SemanticType.Nula)
+   {
+       int retAddr = _emitter.AllocateVariable(returnType, isGlobal: true);
+       _emitter.RegisterAddress($"{name}_ret", retAddr);
+       info.ReturnAddress = retAddr;
+   }
+   ```
+
+   Vivir en **Global** es indispensable: `EndFunc` descarta el frame local de la activación (`_activeLocal = savedLocal`) *antes* de que el llamador pueda leer el resultado, así que un valor guardado en una dirección Local desaparecería justo cuando el llamador lo necesita.
+
+3. **Nuevo `QuadOp.Return`** — formato `(Return, exprName, null, "{funcName}_ret")`, semántica: copia el valor de `exprName` a la dirección reservada para el retorno.
+
+4. **`ExitRetorno` (PN-19)** — valida que `regresa` solo se use dentro de una función no-`nula`, resuelve el tipo con `SemanticCube.Resolve(returnType, Assign, exprType)` (mismo mecanismo que `asigna`, PN-12) y emite el cuádruplo `Return`:
+
+   ```csharp
+   public override void ExitRetorno(PatitoParser.RetornoContext ctx)
+   {
+       var exprType = _emitter.Tipos.Pop();
+       var exprName = _emitter.Operandos.Pop();
+       var current  = CurrentFunction;
+
+       if (current is null) { /* error InvalidReturn: fuera de función */ }
+       if (current.ReturnType == SemanticType.Nula) { /* error InvalidReturn: función nula */ }
+
+       var resultType = SemanticCube.Default.Resolve(current.ReturnType, SemanticOp.Assign, exprType);
+       if (resultType == SemanticType.Error) { /* error TypeMismatch */ }
+
+       _emitter.Fila.Emit(QuadOp.Return, exprName, null, $"{current.Name}_ret");
+   }
+   ```
+
+   Nuevo código de error `SemanticErrorCode.InvalidReturn` cubre ambos casos inválidos (`regresa` fuera de una función, y `regresa` dentro de una función `nula`).
+
+5. **`ExitFactorLlamada` — fix del aliasing** — en vez de empujar directamente el placeholder compartido `"{funcName}_ret"`, se copia su valor a un **temporal recién asignado y de nombre único** inmediatamente después de cada `Gosub`, y es ese temporal el que se apila como operando:
+
+   ```csharp
+   EmitCallSequence(funcName, argCount);     // ERA + Param* + Gosub
+   var temp = _emitter.NewTemp(returnType);
+   _emitter.Fila.Emit(QuadOp.Assign, $"{funcName}_ret", null, temp);
+   _emitter.PushOperand(temp, returnType);
+   ```
+
+   Esto es seguro porque la VM ejecuta los cuádruplos **estrictamente en secuencia**: entre el momento en que el `Gosub` regresa y el `Assign` que copia `{funcName}_ret → temp` se ejecuta, no puede ocurrir ninguna otra llamada que sobrescriba la dirección global de retorno. Cada llamada obtiene así su propia copia aislada del resultado, incluso si ambas comparten la misma dirección `"{funcName}_ret"`.
+
+6. **Ejecución en la VM (`Step`)**:
+
+   ```csharp
+   case QuadOp.Return:
+       SetValue(q.Result, GetValue(q.Left!));
+       return pc + 1;
+   ```
+
+### Ejemplo de secuencia para `entero doble(n) { ... regresa d; }` y `resultado = doble(x) + 1`
+
+```
+// Declaración (PN-19a): se reserva 18002 ("doble_ret") en GlobalInt
+
+// Cuerpo de doble:
+  ...
+  Return   d      _    doble_ret      ← [PN-19] copia d a la dirección global de retorno
+  EndFunc  _      _    doble
+
+// Cuerpo principal — doble(x) + 1  (ExitFactorLlamada arregla el aliasing):
+  ERA      _      _    doble
+  Param    _      _    x
+  Gosub    doble  _    startQ
+  =        doble_ret _ t0            ← [fix de aliasing] copia inmediata a temporal único
+  +        t0     1    t1
+  =        t1     _    resultado
+```
+
+### Tabla resumen
+
+| #     | Punto neurálgico    | Disparador                              | Acción semántica                                                                                                                                          |
+|-------|---------------------|-----------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| PN-19a| `ProcessFuncs`      | declaración de función no-`nula`         | Reserva una dirección Global para `"{name}_ret"` y la guarda en `FunctionInfo.ReturnAddress`.                                                              |
+| PN-19 | `ExitRetorno`       | `retorno : KW_REGRESA expresion SEMICOLON` | Valida contexto (dentro de función no-`nula`) y tipo (`SemanticCube.Resolve(returnType, Assign, exprType)`); emite `Return(exprName, _, "{func}_ret")`.   |
 
 ---
 

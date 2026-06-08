@@ -99,7 +99,7 @@ Patito/
     ├── SemanticAnalyzerTests.cs
     ├── CodeGenTests.cs
     ├── QuadruplesDemoTests.cs
-    └── VirtualMachineTests.cs               NUEVO — TC-VM-01 a TC-VM-07
+    └── VirtualMachineTests.cs               TC-VM-01 a TC-VM-09 (incluye `regresa` y aliasing en recursión)
 ```
 
 ## Cómo construir y ejecutar
@@ -158,7 +158,7 @@ dotnet test --filter "FullyQualifiedName!~QuadruplesDemoTests"
 | `SemanticAnalyzerTests` | 13 | Semántica end-to-end |
 | `CodeGenTests` | 24 | PN-8 a PN-18, Backfill |
 | `QuadruplesDemoTests` | 12 | Demo visual con cuádruplos |
-| **`VirtualMachineTests`** | **7** | **TC-VM-01 a TC-VM-07 — VM completa** |
+| **`VirtualMachineTests`** | **9** | **TC-VM-01 a TC-VM-09 — VM completa, incluyendo `regresa`/`Return` y el fix de aliasing en llamadas recursivas (`fib`)** |
 
 ## Mensajes del CLI
 

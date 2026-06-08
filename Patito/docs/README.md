@@ -1,6 +1,6 @@
 # Documentación del Compilador Patito
 
-Compilador del lenguaje **Patito** — *Víctor Misael Escalante Alvarado, A01741176*. Entrega 5 (versión final).
+Compilador del lenguaje **Patito** — *Víctor Misael Escalante Alvarado, A01741176*. Entrega 6 (versión final).
 
 Esta carpeta contiene toda la documentación técnica del proyecto. Cada archivo está organizado por **tema** para que cualquier concepto se pueda consultar en un solo lugar.
 
@@ -30,7 +30,7 @@ Esta carpeta contiene toda la documentación técnica del proyecto. Cada archivo
 | [`cubo_semantico.md`](cubo_semantico.md)                          | Tabla de consideraciones semánticas: combinación tipo × operador × tipo → resultado.                                                             |
 | [`estructuras.md`](estructuras.md)                                | Diseño de `VariableTable`, `Symbol`, `FunctionInfo` y `FunctionDirectory` (Entrega 2), de `PilaOperadores`, `PilaOperandos`, `PilaTipos`, `FilaCuadruplos` y `QuadrupleEmitter` (Entrega 3), y de `ExecutionMemory`, `ActivationRecord` y `VirtualMachine` (Entrega 5). |
 | [`directorio_y_tablas.md`](directorio_y_tablas.md)                | Descripción de las estructuras que representan el Directorio de Funciones y las Tablas de Variables: campos, operaciones y ejemplo concreto de poblado a partir de código fuente. |
-| [`puntos_neuralgicos.md`](puntos_neuralgicos.md)                  | Recorrido del árbol con ANTLR4: mapeo de cada `Enter…`/`Exit…` del listener a su acción semántica (PN-1 a PN-7, Entrega 2), a su acción de generación de cuádruplos (PN-8 a PN-18, Entregas 3 y 4) y al Goto inicial que habilita la VM (PN-0, Entrega 5). |
+| [`puntos_neuralgicos.md`](puntos_neuralgicos.md)                  | Recorrido del árbol con ANTLR4: mapeo de cada `Enter…`/`Exit…` del listener a su acción semántica (PN-1 a PN-7, Entrega 2), a su acción de generación de cuádruplos (PN-8 a PN-18, Entregas 3 y 4), al Goto inicial que habilita la VM (PN-0, Entrega 5) y a la sentencia `regresa <expr>;` con sus direcciones de retorno (PN-19/PN-19a, Entrega 6). |
 
 ### Generación de código intermedio (Entregas 3 y 4)
 
@@ -49,7 +49,7 @@ Esta carpeta contiene toda la documentación técnica del proyecto. Cada archivo
 
 | Documento | Contenido |
 |-----------|-----------|
-| [`pruebas.md`](pruebas.md) | Plan de pruebas consolidado: casos de scanner, parser, semántica, generación de código y test cases de la VM (TC-VM-01 a TC-VM-07). |
+| [`pruebas.md`](pruebas.md) | Plan de pruebas consolidado: casos de scanner, parser, semántica, generación de código y test cases de la VM (TC-VM-01 a TC-VM-09, incluyendo `regresa` y el fix de aliasing en llamadas recursivas). |
 
 ## Mapa por entrega
 
@@ -63,6 +63,7 @@ Si lo que buscas es el material que corresponde a una **entrega específica**, e
 | **Entrega 3** — Generación de cuádruplos  | [`cuadruplos.md`](cuadruplos.md), [`estructuras.md`](estructuras.md) (§ Entrega 3), [`puntos_neuralgicos.md`](puntos_neuralgicos.md) (§ Entrega 3), [`pruebas.md`](pruebas.md) (§ `CodeGenTests`). |
 | **Entrega 4** — Funciones completas       | [`cuadruplos.md`](cuadruplos.md) (§ Entrega 4), [`puntos_neuralgicos.md`](puntos_neuralgicos.md) (§ Entrega 4), [`direcciones_virtuales.md`](direcciones_virtuales.md), [`pruebas.md`](pruebas.md). |
 | **Entrega 5** — Direcciones virtuales + VM | [`direcciones_virtuales.md`](direcciones_virtuales.md) (implementación completa: `AddressBook`, pool de constantes, `ResetTemps`), [`memoria_ejecucion.md`](memoria_ejecucion.md) (VM: `ExecutionMemory`, `ActivationRecord`, `VirtualMachine`), [`puntos_neuralgicos.md`](puntos_neuralgicos.md) (§ PN-0), [`pruebas.md`](pruebas.md) (§ TC-VM). |
+| **Entrega 6** — `regresa` y direcciones de retorno | [`puntos_neuralgicos.md`](puntos_neuralgicos.md) (§ PN-19/PN-19a), [`gramatica.md`](gramatica.md) (producción `retorno`), [`cuadruplos.md`](cuadruplos.md) (`QuadOp.Return`), [`memoria_ejecucion.md`](memoria_ejecucion.md) (ejecución de `Return` en la VM), [`direcciones_virtuales.md`](direcciones_virtuales.md) (dirección global `"{func}_ret"` y fix de aliasing), [`pruebas.md`](pruebas.md) (TC-VM-08/TC-VM-09). |
 
 ## Convenciones
 

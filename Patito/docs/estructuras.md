@@ -235,6 +235,7 @@ Goto:                   goto Result          (Left = Right = null)
 Print:                  imprimir Result      (Left = Right = null)
 Param:                  param Result         (Left = Right = null)
 Gosub:                  gosub Result         (Left = Right = null)
+Return:                 {func}_ret = Left    (Right = null)   — Entrega 6, ver PN-19
 ```
 
 ### QuadrupleEmitter
@@ -351,7 +352,7 @@ Al ejecutar `EndFunc`:
 
 ## Ver también
 
-- [`puntos_neuralgicos.md`](puntos_neuralgicos.md) — los `Enter…`/`Exit…` que llenan estas estructuras durante el recorrido del árbol.
+- [`puntos_neuralgicos.md`](puntos_neuralgicos.md) — los `Enter…`/`Exit…` que llenan estas estructuras durante el recorrido del árbol, incluyendo PN-19/PN-19a (`regresa` y direcciones de retorno, Entrega 6).
 - [`cubo_semantico.md`](cubo_semantico.md) — la tabla de compatibilidad de tipos a la que estas estructuras dan contexto.
 - [`gramatica.md`](gramatica.md) — las producciones (`vars`, `funcs`, `func_body`, etc.) que disparan la creación de cada entrada.
 - [`pruebas.md`](pruebas.md) — pruebas unitarias de `VariableTable` y `FunctionDirectory`.

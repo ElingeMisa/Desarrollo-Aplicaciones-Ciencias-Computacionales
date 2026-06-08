@@ -46,6 +46,7 @@ El campo `Index` (número de cuádruplo, base 0) lo asigna `FilaCuadruplos.Emit`
 | `Param`         | `(Param, null, null, arg)`            | Pasa el argumento `arg` a la función siguiente      |
 | `Gosub`         | `(Gosub, func, null, startQ)`         | Llama a `func`; `Left=nombre`, `Result=startQuad`   |
 | `EndFunc`       | `(EndFunc, null, null, func)`         | Marca el fin del cuerpo de `func`                   |
+| `Return`        | `(Return, expr, null, "{func}_ret")`  | **[Entrega 6]** Copia el valor de `expr` a la dirección global reservada para el retorno de `func` (registrada en el `AddressBook` como `"{func}_ret"`). Emitido por `regresa <expr>;` (PN-19). |
 
 ---
 
@@ -557,7 +558,7 @@ Compilando con `patitoc examples/14_cuadruplos_funciones.patito --quads` se obti
 ## Ver también
 
 - [`estructuras.md`](estructuras.md) — diseño de `PilaOperadores`, `PilaOperandos`, `PilaTipos`, `FilaCuadruplos`, `QuadrupleEmitter` y las nuevas estructuras de la VM.
-- [`puntos_neuralgicos.md`](puntos_neuralgicos.md) — tabla completa PN-1 a PN-18 con disparadores y acciones.
+- [`puntos_neuralgicos.md`](puntos_neuralgicos.md) — tabla completa PN-1 a PN-19 con disparadores y acciones (incluye PN-19 / `regresa`).
 - [`cubo_semantico.md`](cubo_semantico.md) — tabla de tipos consultada en `EmitBinary`.
 - [`pruebas.md`](pruebas.md) — suite de pruebas unitarias de generación de código (`CodeGenTests.cs`) y tests de la VM (`VirtualMachineTests.cs`).
 - [`gramatica.md`](gramatica.md) — las producciones (`asigna`, `condicion`, `ciclo`, `factor`…) que disparan cada punto neurálgico.
