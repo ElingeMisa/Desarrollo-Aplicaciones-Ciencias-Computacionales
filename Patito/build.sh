@@ -12,11 +12,11 @@
 
 set -euo pipefail
 
-# ── Colores (siempre activos para que el log preserve el formato) ─────────────
+#  Colores (siempre activos para que el log preserve el formato) ─
 BOLD="\033[1m"; CYAN="\033[1;36m"; GREEN="\033[1;32m"
 RED="\033[1;31m"; DIM="\033[2m"; RESET="\033[0m"
 
-# ── Rutas ────────────────────────────────────────────────────────────────────
+#  Rutas 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPILER_PROJECT="$SCRIPT_DIR/src/Patito.Compiler/Patito.Compiler.csproj"
 TESTS_PROJECT="$SCRIPT_DIR/tests/Patito.Tests/Patito.Tests.csproj"
@@ -32,13 +32,13 @@ exec > >(tee -a "$LOGFILE") 2>&1
 
 MODE="${1:---all}"
 
-# ── Helper ───────────────────────────────────────────────────────────────────
+#  Helper ─
 build_project() {
   local proj="$1"
   local label="$2"
   local config="$3"
 
-  echo -e "${CYAN}${BOLD}── Compilando $label ($config)...${RESET}"
+  echo -e "${CYAN}${BOLD} Compilando $label ($config)...${RESET}"
   if dotnet build "$proj" -c "$config" -v quiet 2>&1; then
     echo -e "${GREEN}  ✔ $label OK${RESET}\n"
     return 0
@@ -48,7 +48,7 @@ build_project() {
   fi
 }
 
-# ── Build ────────────────────────────────────────────────────────────────────
+#  Build 
 echo -e "\n${BOLD}  PATITO — BUILD${RESET}\n"
 
 ERRORS=0
@@ -66,7 +66,7 @@ case "$MODE" in
     ;;
 esac
 
-# ── Resumen ───────────────────────────────────────────────────────────────────
+#  Resumen ─
 sep="$(printf '─%.0s' {1..48})"
 echo -e "${BOLD}  $sep${RESET}"
 if [ "$ERRORS" -eq 0 ]; then

@@ -22,4 +22,17 @@
     <ProjectReference Include="../../src/Patito.Compiler/Patito.Compiler.csproj" />
   </ItemGroup>
 
+  <!--
+    Copia la carpeta de ejemplos del repo (../../examples) al directorio de
+    salida del proyecto de pruebas (bin/<Config>/<TF>/examples/), para que
+    ParserTests y QuadruplesDemoTests puedan resolverla via
+    AppContext.BaseDirectory sin importar si el build es Debug o Release.
+  -->
+  <ItemGroup>
+    <None Include="../../examples/**/*.patito">
+      <Link>examples/%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

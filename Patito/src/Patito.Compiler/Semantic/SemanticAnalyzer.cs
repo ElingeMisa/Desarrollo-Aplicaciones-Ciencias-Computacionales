@@ -212,6 +212,16 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
                 continue;
             }
 
+            // [PN-19a] Reservar (en el segmento Global) la direccion del valor
+            // de retorno de la funcion, registrada como "{name}_ret". Solo las
+            // funciones no-'nula' producen un valor que el llamador consume.
+            if (returnType != SemanticType.Nula)
+            {
+                int retAddr = _emitter.AllocateVariable(returnType, isGlobal: true);
+                _emitter.RegisterAddress($"{name}_ret", retAddr);
+                info.ReturnAddress = retAddr;
+            }
+
             var paramsCtx = funcsCtx.@params(i);
             if (paramsCtx is not null)
             {
@@ -672,6 +682,53 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
     }
 
     // ==========================================================================
+    //  [PN-19] ExitRetorno : valida que 'regresa <expr>;' aparezca dentro de
+    //          una funcion con tipo de retorno distinto de 'nula' y que el
+    //          tipo de la expresion sea compatible (cubo semantico, regla
+    //          Assign). Emite (Return, exprName, null, "{func}_ret").
+    // ==========================================================================
+    public override void ExitRetorno(PatitoParser.RetornoContext ctx)
+    {
+        // La expresion siempre deja un resultado en las pilas; sacarlo incluso
+        // en caso de error para mantener las pilas consistentes.
+        if (_emitter.Tipos.IsEmpty) return;
+        var exprType = _emitter.Tipos.Pop();
+        var exprName = _emitter.Operandos.Pop();
+
+        var current = CurrentFunction;
+        if (current is null)
+        {
+            _errors.Add(new SemanticError(
+                ctx.Start.Line, ctx.Start.Column + 1,
+                SemanticErrorCode.InvalidReturn, "",
+                "'regresa' solo puede usarse dentro del cuerpo de una funcion."));
+            return;
+        }
+
+        if (current.ReturnType == SemanticType.Nula)
+        {
+            _errors.Add(new SemanticError(
+                ctx.Start.Line, ctx.Start.Column + 1,
+                SemanticErrorCode.InvalidReturn, current.Name,
+                $"La funcion '{current.Name}' es 'nula' y no puede regresar un valor."));
+            return;
+        }
+
+        var resultType = SemanticCube.Default.Resolve(current.ReturnType, SemanticOp.Assign, exprType);
+        if (resultType == SemanticType.Error)
+        {
+            _errors.Add(new SemanticError(
+                ctx.Start.Line, ctx.Start.Column + 1,
+                SemanticErrorCode.TypeMismatch, current.Name,
+                $"No se puede regresar {exprType.ToLexeme()} en la funcion '{current.Name}' " +
+                $"de tipo {current.ReturnType.ToLexeme()}."));
+            return;
+        }
+
+        _emitter.Fila.Emit(QuadOp.Return, exprName, null, $"{current.Name}_ret");
+    }
+
+    // ==========================================================================
     //  [PN-18] ExitCall_stmt : emite ERA + Param (por cada arg) + Gosub.
     //
     //  Secuencia de cuadruplos para f(a, b):
@@ -692,8 +749,13 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
 
     // ==========================================================================
     //  FactorLlamada: funcion invocada como operando dentro de una expresion.
-    //  Mantiene las pilas consistentes emitiendo ERA+Param+Gosub y apilando
-    //  el valor de retorno para que el padre (termino/exp) lo consuma.
+    //  Emite ERA+Param+Gosub y luego copia "{func}_ret" (la direccion global
+    //  reservada para el valor de retorno) a un TEMPORAL fresco antes de
+    //  apilarlo. Esto es indispensable: si la misma funcion se invoca mas de
+    //  una vez dentro de la misma expresion (p.ej. fib(k-1) + fib(k-2)), las
+    //  dos llamadas comparten la direccion "{func}_ret"; copiar de inmediato a
+    //  un temporal distinto evita que la segunda llamada sobreescriba el
+    //  resultado de la primera antes de combinarlos.
     // ==========================================================================
     public override void ExitFactorLlamada(PatitoParser.FactorLlamadaContext ctx)
     {
@@ -704,11 +766,23 @@ public sealed class SemanticAnalyzer : PatitoBaseListener
 
         EmitCallSequence(funcName, llamada.args()?.expresion()?.Length ?? 0);
 
-        // Apilar valor de retorno para que el padre (termino/exp) lo consuma
         SemanticType returnType = SemanticType.Error;
         if (_directory.TryLookup(funcName, out var info))
             returnType = info.ReturnType;
-        _emitter.PushOperand($"{funcName}_ret", returnType);
+
+        if (returnType == SemanticType.Error || returnType == SemanticType.Nula)
+        {
+            // Funcion inexistente o 'nula' usada como factor: ya se reporto el
+            // error correspondiente (UndeclaredFunction / TypeMismatch en la
+            // asignacion que la contiene). Apilar un placeholder para no
+            // romper el balance de las pilas.
+            _emitter.PushOperand("?", SemanticType.Error);
+            return;
+        }
+
+        var temp = _emitter.NewTemp(returnType);
+        _emitter.Fila.Emit(QuadOp.Assign, $"{funcName}_ret", null, temp);
+        _emitter.PushOperand(temp, returnType);
     }
 
     // ==========================================================================

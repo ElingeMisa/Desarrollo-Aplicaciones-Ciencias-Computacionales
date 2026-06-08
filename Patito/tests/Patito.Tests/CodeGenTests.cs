@@ -81,8 +81,8 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        Assert.Single(qs);
-        AssertQuad(qs, 0, QuadOp.Assign, "42", null, "x");
+        Assert.Equal(2, qs.Count);
+        AssertQuad(qs, 1, QuadOp.Assign, "42", null, "x");
     }
 
     [Fact]
@@ -98,8 +98,8 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        Assert.Single(qs);
-        AssertQuad(qs, 0, QuadOp.Assign, "3.14", null, "pi");
+        Assert.Equal(2, qs.Count);
+        AssertQuad(qs, 1, QuadOp.Assign, "3.14", null, "pi");
     }
 
     [Fact]
@@ -116,9 +116,9 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        Assert.Equal(2, qs.Count);
-        AssertQuad(qs, 0, QuadOp.Assign, "1",  null, "a");
-        AssertQuad(qs, 1, QuadOp.Assign, "a",  null, "b");
+        Assert.Equal(3, qs.Count);
+        AssertQuad(qs, 1, QuadOp.Assign, "1",  null, "a");
+        AssertQuad(qs, 2, QuadOp.Assign, "a",  null, "b");
     }
 
     // -------------------------------------------------------------------------
@@ -140,11 +140,11 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        Assert.Equal(4, qs.Count);
-        AssertQuad(qs, 0, QuadOp.Assign, "2",  null, "a");
-        AssertQuad(qs, 1, QuadOp.Assign, "3",  null, "b");
-        AssertQuad(qs, 2, QuadOp.Plus,   "a",  "b",  "t0");
-        AssertQuad(qs, 3, QuadOp.Assign, "t0", null, "x");
+        Assert.Equal(5, qs.Count);
+        AssertQuad(qs, 1, QuadOp.Assign, "2",  null, "a");
+        AssertQuad(qs, 2, QuadOp.Assign, "3",  null, "b");
+        AssertQuad(qs, 3, QuadOp.Plus,   "a",  "b",  "t0");
+        AssertQuad(qs, 4, QuadOp.Assign, "t0", null, "x");
     }
 
     [Fact]
@@ -160,9 +160,9 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        Assert.Equal(2, qs.Count);
-        AssertQuad(qs, 0, QuadOp.Minus,  "a",  "b",  "t0");
-        AssertQuad(qs, 1, QuadOp.Assign, "t0", null, "x");
+        Assert.Equal(3, qs.Count);
+        AssertQuad(qs, 1, QuadOp.Minus,  "a",  "b",  "t0");
+        AssertQuad(qs, 2, QuadOp.Assign, "t0", null, "x");
     }
 
     // -------------------------------------------------------------------------
@@ -182,9 +182,9 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        Assert.Equal(2, qs.Count);
-        AssertQuad(qs, 0, QuadOp.Times,  "a",  "b",  "t0");
-        AssertQuad(qs, 1, QuadOp.Assign, "t0", null, "x");
+        Assert.Equal(3, qs.Count);
+        AssertQuad(qs, 1, QuadOp.Times,  "a",  "b",  "t0");
+        AssertQuad(qs, 2, QuadOp.Assign, "t0", null, "x");
     }
 
     [Fact]
@@ -201,9 +201,9 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        Assert.Equal(2, qs.Count);
-        AssertQuad(qs, 0, QuadOp.Divide, "a",  "b",  "t0");
-        AssertQuad(qs, 1, QuadOp.Assign, "t0", null, "r");
+        Assert.Equal(3, qs.Count);
+        AssertQuad(qs, 1, QuadOp.Divide, "a",  "b",  "t0");
+        AssertQuad(qs, 2, QuadOp.Assign, "t0", null, "r");
     }
 
     // -------------------------------------------------------------------------
@@ -227,10 +227,10 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        Assert.Equal(3, qs.Count);
-        AssertQuad(qs, 0, QuadOp.Times,  "b",  "c",  "t0");
-        AssertQuad(qs, 1, QuadOp.Plus,   "a",  "t0", "t1");
-        AssertQuad(qs, 2, QuadOp.Assign, "t1", null, "x");
+        Assert.Equal(4, qs.Count);
+        AssertQuad(qs, 1, QuadOp.Times,  "b",  "c",  "t0");
+        AssertQuad(qs, 2, QuadOp.Plus,   "a",  "t0", "t1");
+        AssertQuad(qs, 3, QuadOp.Assign, "t1", null, "x");
     }
 
     [Fact]
@@ -249,10 +249,10 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        Assert.Equal(3, qs.Count);
-        AssertQuad(qs, 0, QuadOp.Plus,   "a",  "b",  "t0");
-        AssertQuad(qs, 1, QuadOp.Times,  "t0", "c",  "t1");
-        AssertQuad(qs, 2, QuadOp.Assign, "t1", null, "x");
+        Assert.Equal(4, qs.Count);
+        AssertQuad(qs, 1, QuadOp.Plus,   "a",  "b",  "t0");
+        AssertQuad(qs, 2, QuadOp.Times,  "t0", "c",  "t1");
+        AssertQuad(qs, 3, QuadOp.Assign, "t1", null, "x");
     }
 
     // -------------------------------------------------------------------------
@@ -274,10 +274,10 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        Assert.Equal(3, qs.Count);
-        AssertQuad(qs, 0, QuadOp.Assign, "5",  null, "x");
-        AssertQuad(qs, 1, QuadOp.Neg,    null, "x",  "t0");
-        AssertQuad(qs, 2, QuadOp.Assign, "t0", null, "y");
+        Assert.Equal(4, qs.Count);
+        AssertQuad(qs, 1, QuadOp.Assign, "5",  null, "x");
+        AssertQuad(qs, 2, QuadOp.Neg,    null, "x",  "t0");
+        AssertQuad(qs, 3, QuadOp.Assign, "t0", null, "y");
     }
 
     // -------------------------------------------------------------------------
@@ -302,10 +302,10 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        // [0] = quad relacional, [1] = GotoF, [2] = Print
-        Assert.True(qs.Count >= 3, $"Se esperaban >= 3 cuadruplos, hay {qs.Count}");
-        AssertQuad(qs, 0, expectedOp, "a", "b", "t0");
-        Assert.Equal(QuadOp.GotoF, qs[1].Op);
+        // [0] = Goto inicial (PN-0), [1] = quad relacional, [2] = GotoF, [3] = Print
+        Assert.True(qs.Count >= 4, $"Se esperaban >= 4 cuadruplos, hay {qs.Count}");
+        AssertQuad(qs, 1, expectedOp, "a", "b", "t0");
+        Assert.Equal(QuadOp.GotoF, qs[2].Op);
     }
 
     // -------------------------------------------------------------------------
@@ -322,8 +322,8 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        Assert.Single(qs);
-        AssertQuad(qs, 0, QuadOp.Print, null, null, "\"hola mundo\"");
+        Assert.Equal(2, qs.Count);
+        AssertQuad(qs, 1, QuadOp.Print, null, null, "\"hola mundo\"");
     }
 
     [Fact]
@@ -339,9 +339,9 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        Assert.Equal(2, qs.Count);
-        AssertQuad(qs, 0, QuadOp.Assign, "7", null, "x");
-        AssertQuad(qs, 1, QuadOp.Print,  null, null, "x");
+        Assert.Equal(3, qs.Count);
+        AssertQuad(qs, 1, QuadOp.Assign, "7", null, "x");
+        AssertQuad(qs, 2, QuadOp.Print,  null, null, "x");
     }
 
     [Fact]
@@ -357,10 +357,10 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        Assert.Equal(3, qs.Count);
-        AssertQuad(qs, 0, QuadOp.Assign, "42",         null, "n");
-        AssertQuad(qs, 1, QuadOp.Print,  null,          null, "\"respuesta:\"");
-        AssertQuad(qs, 2, QuadOp.Print,  null,          null, "n");
+        Assert.Equal(4, qs.Count);
+        AssertQuad(qs, 1, QuadOp.Assign, "42",         null, "n");
+        AssertQuad(qs, 2, QuadOp.Print,  null,          null, "\"respuesta:\"");
+        AssertQuad(qs, 3, QuadOp.Print,  null,          null, "n");
     }
 
     // -------------------------------------------------------------------------
@@ -371,9 +371,10 @@ public class CodeGenTests
     public void CondicionSinSino_EmiteGotoFBackfilled()
     {
         // si (x < 5) { y = 1; };
-        // ->  [0](Lt,  "x","5","t0")
-        //     [1](GotoF,"t0",null,"3")   <- backfill en ExitCondicion: count=3
-        //     [2](Assign,"1",null,"y")
+        // ->  [0](Goto, null,null,"1")   <- PN-0: salto inicial (sin funciones, inocuo)
+        //     [1](Lt,  "x","5","t0")
+        //     [2](GotoF,"t0",null,"4")   <- backfill en ExitCondicion: count=4
+        //     [3](Assign,"1",null,"y")
         const string src = """
             programa t;
             vars
@@ -385,10 +386,10 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        Assert.Equal(3, qs.Count);
-        AssertQuad(qs, 0, QuadOp.Lt,    "x",  "5",  "t0");
-        AssertQuad(qs, 1, QuadOp.GotoF, "t0", null, "3");
-        AssertQuad(qs, 2, QuadOp.Assign,"1",  null, "y");
+        Assert.Equal(4, qs.Count);
+        AssertQuad(qs, 1, QuadOp.Lt,    "x",  "5",  "t0");
+        AssertQuad(qs, 2, QuadOp.GotoF, "t0", null, "4");
+        AssertQuad(qs, 3, QuadOp.Assign,"1",  null, "y");
     }
 
     // -------------------------------------------------------------------------
@@ -399,11 +400,12 @@ public class CodeGenTests
     public void CondicionConSino_EmiteGotoFYGotoAmbosBackfilled()
     {
         // si (x < 5) { y = 1; } sino { y = 2; };
-        // ->  [0](Lt,  "x","5","t0")
-        //     [1](GotoF,"t0",null,"4")   <- PN-15 backfill con count=4 antes de sino
-        //     [2](Assign,"1",null,"y")
-        //     [3](Goto, null,null,"5")   <- PN-15 emite Goto; PN-16 backfill con count=5
-        //     [4](Assign,"2",null,"y")
+        // ->  [0](Goto, null,null,"1")   <- PN-0: salto inicial (sin funciones, inocuo)
+        //     [1](Lt,  "x","5","t0")
+        //     [2](GotoF,"t0",null,"5")   <- PN-15 backfill con count=5 antes de sino
+        //     [3](Assign,"1",null,"y")
+        //     [4](Goto, null,null,"6")   <- PN-15 emite Goto; PN-16 backfill con count=6
+        //     [5](Assign,"2",null,"y")
         const string src = """
             programa t;
             vars
@@ -417,12 +419,12 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        Assert.Equal(5, qs.Count);
-        AssertQuad(qs, 0, QuadOp.Lt,    "x",  "5",  "t0");
-        AssertQuad(qs, 1, QuadOp.GotoF, "t0", null, "4");
-        AssertQuad(qs, 2, QuadOp.Assign,"1",  null, "y");
-        AssertQuad(qs, 3, QuadOp.Goto,  null, null, "5");
-        AssertQuad(qs, 4, QuadOp.Assign,"2",  null, "y");
+        Assert.Equal(6, qs.Count);
+        AssertQuad(qs, 1, QuadOp.Lt,    "x",  "5",  "t0");
+        AssertQuad(qs, 2, QuadOp.GotoF, "t0", null, "5");
+        AssertQuad(qs, 3, QuadOp.Assign,"1",  null, "y");
+        AssertQuad(qs, 4, QuadOp.Goto,  null, null, "6");
+        AssertQuad(qs, 5, QuadOp.Assign,"2",  null, "y");
     }
 
     // -------------------------------------------------------------------------
@@ -435,14 +437,16 @@ public class CodeGenTests
         // i = 0;
         // mientras (i < 5) haz { i = i + 1; };
         //
-        // EnterCiclo guarda inicio = count = 1 (despues de [0] Assign)
+        // [0](Goto, null,null,"1")  <- PN-0: salto inicial (sin funciones, inocuo)
+        // EnterCiclo guarda inicio = count = 2 (despues de [1] Assign)
         //
-        // ->  [0](Assign,"0",null,"i")
-        //     [1](Lt,   "i","5","t0")
-        //     [2](GotoF,"t0",null,"6")   <- backfill en ExitCiclo: count=6
-        //     [3](Plus, "i","1","t1")
-        //     [4](Assign,"t1",null,"i")
-        //     [5](Goto, null,null,"1")   <- ExitCiclo emite Goto al inicio=1
+        // ->  [0](Goto,  null,null,"1")
+        //     [1](Assign,"0",null,"i")
+        //     [2](Lt,   "i","5","t0")
+        //     [3](GotoF,"t0",null,"7")   <- backfill en ExitCiclo: count=7
+        //     [4](Plus, "i","1","t1")
+        //     [5](Assign,"t1",null,"i")
+        //     [6](Goto, null,null,"2")   <- ExitCiclo emite Goto al inicio=2
         const string src = """
             programa t;
             vars
@@ -455,13 +459,13 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        Assert.Equal(6, qs.Count);
-        AssertQuad(qs, 0, QuadOp.Assign, "0",  null, "i");
-        AssertQuad(qs, 1, QuadOp.Lt,     "i",  "5",  "t0");
-        AssertQuad(qs, 2, QuadOp.GotoF,  "t0", null, "6");
-        AssertQuad(qs, 3, QuadOp.Plus,   "i",  "1",  "t1");
-        AssertQuad(qs, 4, QuadOp.Assign, "t1", null, "i");
-        AssertQuad(qs, 5, QuadOp.Goto,   null, null, "1");
+        Assert.Equal(7, qs.Count);
+        AssertQuad(qs, 1, QuadOp.Assign, "0",  null, "i");
+        AssertQuad(qs, 2, QuadOp.Lt,     "i",  "5",  "t0");
+        AssertQuad(qs, 3, QuadOp.GotoF,  "t0", null, "7");
+        AssertQuad(qs, 4, QuadOp.Plus,   "i",  "1",  "t1");
+        AssertQuad(qs, 5, QuadOp.Assign, "t1", null, "i");
+        AssertQuad(qs, 6, QuadOp.Goto,   null, null, "2");
     }
 
     // -------------------------------------------------------------------------
@@ -472,7 +476,8 @@ public class CodeGenTests
     public void LlamadaSinArgs_EmiteEraYGosub()
     {
         // Entrega 4: la secuencia es ERA(f) + Gosub(f, startQ).
-        // f tiene solo EndFunc, asi que su cuerpo es el cuadruplo 0.
+        // f tiene solo EndFunc; con el Goto inicial (PN-0) en [0], su cuerpo
+        // queda en el cuadruplo 1.
         const string src = """
             programa t;
             nula f () { };
@@ -481,10 +486,11 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        // f_body: EndFunc[0]
-        // main:   ERA[1], Gosub[2]
-        AssertQuad(qs, 1, QuadOp.Era,   null, null, "f");
-        AssertQuad(qs, 2, QuadOp.Gosub, "f",  null, "0");
+        // [0]:    Goto inicial (PN-0)
+        // f_body: EndFunc[1]
+        // main:   ERA[2], Gosub[3]
+        AssertQuad(qs, 2, QuadOp.Era,   null, null, "f");
+        AssertQuad(qs, 3, QuadOp.Gosub, "f",  null, "1");
     }
 
     [Fact]
@@ -502,8 +508,9 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        // f_body: EndFunc[0]
-        // main:   Assign[1], ERA[2], Param[3], Gosub[4]
+        // [0]:    Goto inicial (PN-0)
+        // f_body: EndFunc[1]
+        // main:   Assign[2], ERA[3], Param[4], Gosub[5]
         var era   = qs[^3];
         var param = qs[^2];
         var gosub = qs[^1];
@@ -536,7 +543,7 @@ public class CodeGenTests
         AssertQuad(qs, n - 4, QuadOp.Era,   null, null, "f");
         AssertQuad(qs, n - 3, QuadOp.Param, null, null, "a");
         AssertQuad(qs, n - 2, QuadOp.Param, null, null, "7");
-        AssertQuad(qs, n - 1, QuadOp.Gosub, "f",  null, "0");
+        AssertQuad(qs, n - 1, QuadOp.Gosub, "f",  null, "1");
     }
 
     // -------------------------------------------------------------------------
@@ -558,13 +565,13 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        Assert.Equal(6, qs.Count);
-        AssertQuad(qs, 0, QuadOp.Assign, "1",     null, "a");
-        AssertQuad(qs, 1, QuadOp.Assign, "2",     null, "b");
-        AssertQuad(qs, 2, QuadOp.Plus,   "a",     "b",  "t0");
-        AssertQuad(qs, 3, QuadOp.Assign, "t0",    null, "c");
-        AssertQuad(qs, 4, QuadOp.Print,  null,    null, "\"suma:\"");
-        AssertQuad(qs, 5, QuadOp.Print,  null,    null, "c");
+        Assert.Equal(7, qs.Count);
+        AssertQuad(qs, 1, QuadOp.Assign, "1",     null, "a");
+        AssertQuad(qs, 2, QuadOp.Assign, "2",     null, "b");
+        AssertQuad(qs, 3, QuadOp.Plus,   "a",     "b",  "t0");
+        AssertQuad(qs, 4, QuadOp.Assign, "t0",    null, "c");
+        AssertQuad(qs, 5, QuadOp.Print,  null,    null, "\"suma:\"");
+        AssertQuad(qs, 6, QuadOp.Print,  null,    null, "c");
     }
 
     [Fact]
@@ -585,21 +592,22 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        // [0](Assign,"0",null,"i")
-        // [1](Lt,"i","3","t0")
-        // [2](GotoF,"t0",null,"7")
-        // [3](Print,null,null,"i")
-        // [4](Plus,"i","1","t1")
-        // [5](Assign,"t1",null,"i")
-        // [6](Goto,null,null,"1")
-        Assert.Equal(7, qs.Count);
-        AssertQuad(qs, 0, QuadOp.Assign, "0",  null, "i");
-        AssertQuad(qs, 1, QuadOp.Lt,     "i",  "3",  "t0");
-        AssertQuad(qs, 2, QuadOp.GotoF,  "t0", null, "7");
-        AssertQuad(qs, 3, QuadOp.Print,  null, null, "i");
-        AssertQuad(qs, 4, QuadOp.Plus,   "i",  "1",  "t1");
-        AssertQuad(qs, 5, QuadOp.Assign, "t1", null, "i");
-        AssertQuad(qs, 6, QuadOp.Goto,   null, null, "1");
+        // [0](Goto,null,null,"1")     <- PN-0: salto inicial (sin funciones, inocuo)
+        // [1](Assign,"0",null,"i")
+        // [2](Lt,"i","3","t0")
+        // [3](GotoF,"t0",null,"8")
+        // [4](Print,null,null,"i")
+        // [5](Plus,"i","1","t1")
+        // [6](Assign,"t1",null,"i")
+        // [7](Goto,null,null,"2")
+        Assert.Equal(8, qs.Count);
+        AssertQuad(qs, 1, QuadOp.Assign, "0",  null, "i");
+        AssertQuad(qs, 2, QuadOp.Lt,     "i",  "3",  "t0");
+        AssertQuad(qs, 3, QuadOp.GotoF,  "t0", null, "8");
+        AssertQuad(qs, 4, QuadOp.Print,  null, null, "i");
+        AssertQuad(qs, 5, QuadOp.Plus,   "i",  "1",  "t1");
+        AssertQuad(qs, 6, QuadOp.Assign, "t1", null, "i");
+        AssertQuad(qs, 7, QuadOp.Goto,   null, null, "2");
     }
 
     [Fact]
@@ -695,8 +703,8 @@ public class CodeGenTests
         Assert.True(r.Success);
         var fi = r.FunctionDirectory!.Lookup("noop");
         Assert.NotNull(fi);
-        // El primer cuadruplo del programa es el EndFunc de noop (indice 0).
-        Assert.Equal(0, fi!.StartQuad);
+        // [0] es el Goto inicial (PN-0); el EndFunc de noop queda en el indice 1.
+        Assert.Equal(1, fi!.StartQuad);
     }
 
     [Fact]
@@ -724,8 +732,8 @@ public class CodeGenTests
         Assert.True(r.Success);
         var fi = r.FunctionDirectory!.Lookup("duplicar");
         Assert.NotNull(fi);
-        // El cuerpo de duplicar es el primer codigo que se genera (indice 0).
-        Assert.Equal(0, fi!.StartQuad);
+        // [0] es el Goto inicial (PN-0); el cuerpo de duplicar empieza en el indice 1.
+        Assert.Equal(1, fi!.StartQuad);
     }
 
     // -------------------------------------------------------------------------
@@ -747,8 +755,8 @@ public class CodeGenTests
             """;
         var qs = Quads(src);
         // Los cuadruplos del cuerpo de 'saluda' terminan con EndFunc.
-        // El EndFunc es el segundo cuadruplo (0=Print, 1=EndFunc).
-        AssertQuad(qs, 1, QuadOp.EndFunc, null, null, "saluda");
+        // [0]=Goto inicial (PN-0), [1]=Print, [2]=EndFunc.
+        AssertQuad(qs, 2, QuadOp.EndFunc, null, null, "saluda");
     }
 
     [Fact]
@@ -769,10 +777,11 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        // f1: Print[0], EndFunc[1]
-        // f2: Print[2], EndFunc[3]
-        AssertQuad(qs, 1, QuadOp.EndFunc, null, null, "f1");
-        AssertQuad(qs, 3, QuadOp.EndFunc, null, null, "f2");
+        // [0]: Goto inicial (PN-0)
+        // f1: Print[1], EndFunc[2]
+        // f2: Print[3], EndFunc[4]
+        AssertQuad(qs, 2, QuadOp.EndFunc, null, null, "f1");
+        AssertQuad(qs, 4, QuadOp.EndFunc, null, null, "f2");
     }
 
     // -------------------------------------------------------------------------
@@ -796,10 +805,11 @@ public class CodeGenTests
             """;
         var qs = Quads(src);
         // Cuadruplos del cuerpo principal:
-        //   f_body: Print[0], EndFunc[1]
-        //   main:   ERA[2], Gosub[3]
-        AssertQuad(qs, 2, QuadOp.Era,   null, null, "f");
-        AssertQuad(qs, 3, QuadOp.Gosub, "f",  null, "0");  // startQuad=0
+        //   [0]:    Goto inicial (PN-0)
+        //   f_body: Print[1], EndFunc[2]
+        //   main:   ERA[3], Gosub[4]
+        AssertQuad(qs, 3, QuadOp.Era,   null, null, "f");
+        AssertQuad(qs, 4, QuadOp.Gosub, "f",  null, "1");  // startQuad=1
     }
 
     [Fact]
@@ -823,11 +833,12 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        // Cuerpo de doble: Plus[0], Assign[1], Print[2], EndFunc[3]
-        // Cuerpo principal: Assign[4], ERA[5], Param[6], Gosub[7]
-        AssertQuad(qs, 5, QuadOp.Era,   null, null, "doble");
-        AssertQuad(qs, 6, QuadOp.Param, null, null, "x");
-        AssertQuad(qs, 7, QuadOp.Gosub, "doble", null, "0");
+        // [0]: Goto inicial (PN-0)
+        // Cuerpo de doble: Plus[1], Assign[2], Print[3], EndFunc[4]
+        // Cuerpo principal: Assign[5], ERA[6], Param[7], Gosub[8]
+        AssertQuad(qs, 6, QuadOp.Era,   null, null, "doble");
+        AssertQuad(qs, 7, QuadOp.Param, null, null, "x");
+        AssertQuad(qs, 8, QuadOp.Gosub, "doble", null, "1");
     }
 
     [Fact]
@@ -852,13 +863,14 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        // Cuerpo de suma: Plus[0], Assign[1], Print[2], EndFunc[3]
-        // Cuerpo principal: Assign[4](a=3), Assign[5](b=4)
-        //   ERA[6], Param[7](a), Param[8](b), Gosub[9]
-        AssertQuad(qs, 6, QuadOp.Era,   null, null, "suma");
-        AssertQuad(qs, 7, QuadOp.Param, null, null, "a");
-        AssertQuad(qs, 8, QuadOp.Param, null, null, "b");
-        AssertQuad(qs, 9, QuadOp.Gosub, "suma", null, "0");
+        // [0]: Goto inicial (PN-0)
+        // Cuerpo de suma: Plus[1], Assign[2], Print[3], EndFunc[4]
+        // Cuerpo principal: Assign[5](a=3), Assign[6](b=4)
+        //   ERA[7], Param[8](a), Param[9](b), Gosub[10]
+        AssertQuad(qs, 7, QuadOp.Era,   null, null, "suma");
+        AssertQuad(qs, 8, QuadOp.Param, null, null, "a");
+        AssertQuad(qs, 9, QuadOp.Param, null, null, "b");
+        AssertQuad(qs, 10, QuadOp.Gosub, "suma", null, "1");
     }
 
     [Fact]
@@ -880,12 +892,13 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        // ping body: Print[0], EndFunc[1]
-        // main:      Assign[2], ERA[3], Gosub[4], ERA[5], Gosub[6]
-        AssertQuad(qs, 3, QuadOp.Era,   null, null, "ping");
-        AssertQuad(qs, 4, QuadOp.Gosub, "ping", null, "0");
-        AssertQuad(qs, 5, QuadOp.Era,   null, null, "ping");
-        AssertQuad(qs, 6, QuadOp.Gosub, "ping", null, "0");
+        // [0]:       Goto inicial (PN-0)
+        // ping body: Print[1], EndFunc[2]
+        // main:      Assign[3], ERA[4], Gosub[5], ERA[6], Gosub[7]
+        AssertQuad(qs, 4, QuadOp.Era,   null, null, "ping");
+        AssertQuad(qs, 5, QuadOp.Gosub, "ping", null, "1");
+        AssertQuad(qs, 6, QuadOp.Era,   null, null, "ping");
+        AssertQuad(qs, 7, QuadOp.Gosub, "ping", null, "1");
     }
 
     // -------------------------------------------------------------------------
@@ -946,14 +959,15 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        // Quad 0: Assign x=10
-        // Quad 1: Gt x 5 t0
-        // Quad 2: GotoF t0 _ <dest>
-        // Quad 3: Print "mayor"
-        // Quad 4: Goto _ _ <dest>
-        // Quad 5: Print "menor o igual"
-        AssertQuad(qs, 2, QuadOp.GotoF, "t0", null, "5");
-        AssertQuad(qs, 4, QuadOp.Goto,  null, null, "6");
+        // Quad 0: Goto inicial (PN-0)
+        // Quad 1: Assign x=10
+        // Quad 2: Gt x 5 t0
+        // Quad 3: GotoF t0 _ <dest>
+        // Quad 4: Print "mayor"
+        // Quad 5: Goto _ _ <dest>
+        // Quad 6: Print "menor o igual"
+        AssertQuad(qs, 3, QuadOp.GotoF, "t0", null, "6");
+        AssertQuad(qs, 5, QuadOp.Goto,  null, null, "7");
     }
 
     [Fact]
@@ -971,11 +985,12 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        // 0: Assign n=0
-        // 1: Eq n 0 t0
-        // 2: GotoF t0 _ 4  (despues del si)
-        // 3: Print "cero"
-        AssertQuad(qs, 2, QuadOp.GotoF, "t0", null, "4");
+        // 0: Goto inicial (PN-0)
+        // 1: Assign n=0
+        // 2: Eq n 0 t0
+        // 3: GotoF t0 _ 5  (despues del si)
+        // 4: Print "cero"
+        AssertQuad(qs, 3, QuadOp.GotoF, "t0", null, "5");
     }
 
     // -------------------------------------------------------------------------
@@ -997,15 +1012,16 @@ public class CodeGenTests
             } fin
             """;
         var qs = Quads(src);
-        // 0: Assign i=0
-        // 1: Lt i 3 t0       <- inicio ciclo (index 1)
-        // 2: GotoF t0 _ 6    <- sale del ciclo
-        // 3: Plus i 1 t1
-        // 4: Assign t1 _ i
-        // 5: Goto _ _ 1      <- regresa al inicio
-        AssertQuad(qs, 1, QuadOp.Lt,    "i",  "3",  "t0");
-        AssertQuad(qs, 2, QuadOp.GotoF, "t0", null, "6");
-        AssertQuad(qs, 5, QuadOp.Goto,  null, null, "1");
+        // 0: Goto inicial (PN-0)
+        // 1: Assign i=0
+        // 2: Lt i 3 t0       <- inicio ciclo (index 2)
+        // 3: GotoF t0 _ 7    <- sale del ciclo
+        // 4: Plus i 1 t1
+        // 5: Assign t1 _ i
+        // 6: Goto _ _ 2      <- regresa al inicio
+        AssertQuad(qs, 2, QuadOp.Lt,    "i",  "3",  "t0");
+        AssertQuad(qs, 3, QuadOp.GotoF, "t0", null, "7");
+        AssertQuad(qs, 6, QuadOp.Goto,  null, null, "2");
     }
 
     // -------------------------------------------------------------------------

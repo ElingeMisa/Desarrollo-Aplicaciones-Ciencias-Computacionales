@@ -46,6 +46,16 @@ public sealed class FunctionInfo
     /// <summary>Indice del primer cuadruplo de la funcion (se llena en Entrega 3).</summary>
     public int StartQuad { get; set; } = -1;
 
+    /// <summary>
+    /// Direccion virtual reservada (en el segmento Global) para el valor de
+    /// retorno de la funcion, registrada en el AddressBook como "{Name}_ret".
+    /// Vale -1 para funciones 'nula' (no producen valor de retorno).
+    /// Vivir en Global (y no en el frame local) es necesario porque el valor
+    /// debe sobrevivir al EndFunc, que descarta la memoria local de la
+    /// activacion antes de que el llamador pueda leerlo.
+    /// </summary>
+    public int ReturnAddress { get; set; } = -1;
+
     public FunctionInfo(string name, SemanticType returnType, int line, int column)
     {
         Name = name;

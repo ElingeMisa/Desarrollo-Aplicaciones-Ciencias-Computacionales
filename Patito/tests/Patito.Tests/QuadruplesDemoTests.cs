@@ -49,7 +49,7 @@ public class QuadruplesDemoTests
     private static readonly string ExamplesDir =
         Path.GetFullPath(Path.Combine(
             AppContext.BaseDirectory,
-            "..", "..", "..", "..", "..", "..", "examples"));
+            "..", "..", "..", "..", "..", "examples"));
 
     public QuadruplesDemoTests(ITestOutputHelper output) => _out = output;
 

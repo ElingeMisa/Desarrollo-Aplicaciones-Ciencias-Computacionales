@@ -12,6 +12,7 @@ entero doble (n: entero) {
     vars
         d: entero;
     d = n + n;
+    regresa d;
 };
 
 inicio {

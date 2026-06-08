@@ -1,1 +1,28 @@
-// Version recursiva de fibonnacci
+// =============================================================================
+//  18_Fibonacci_recursivo.patito
+//  Demuestra: calculo recursivo de la sucesion de Fibonacci mediante una
+//  funcion ("entero") que se invoca a si misma y se usa como factor dentro
+//  de una expresion (fib(k - 1) + fib(k - 2)), igual que en 11_retorno_tipo.
+// =============================================================================
+
+programa fibonacciRecursivo;
+vars
+    n, resultado: entero;
+
+entero fib (k: entero) {
+    vars
+        valor: entero;
+    si (k < 2) {
+        valor = k;
+    } sino {
+        valor = fib(k - 1) + fib(k - 2);
+    };
+    regresa valor;
+};
+
+inicio {
+    n = 8;
+    resultado = fib(n);
+    escribe("Fibonacci (version recursiva) del termino:", n);
+    escribe("resultado:", resultado);
+} fin

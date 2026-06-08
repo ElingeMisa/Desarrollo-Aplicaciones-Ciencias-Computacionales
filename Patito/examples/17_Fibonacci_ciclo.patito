@@ -1,1 +1,28 @@
-// version recursiva de fibonnacci
+// =============================================================================
+//  17_Fibonacci_ciclo.patito
+//  Demuestra: calculo iterativo de la sucesion de Fibonacci usando un ciclo
+//  "mientras" y variables auxiliares para llevar los dos terminos previos.
+// =============================================================================
+
+programa fibonacciCiclo;
+vars
+    n, i, anterior, actual, siguiente: entero;
+
+inicio {
+    n = 10;
+    anterior = 0;
+    actual = 1;
+    i = 2;
+
+    escribe("Fibonacci (version iterativa) hasta el termino:", n);
+    escribe(anterior);
+    escribe(actual);
+
+    mientras (i < n) haz {
+        siguiente = anterior + actual;
+        escribe(siguiente);
+        anterior = actual;
+        actual = siguiente;
+        i = i + 1;
+    };
+} fin

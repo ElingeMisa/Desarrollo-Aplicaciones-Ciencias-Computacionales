@@ -32,20 +32,20 @@ namespace Patito.Compiler.CodeGen;
 /// <summary>
 /// Orquesta las pilas y la fila de cuadruplos durante la generacion de
 /// codigo intermedio. A partir de la Entrega 5 tambien gestiona el
-/// <see cref="AddressBook"/> (nombre → direccion virtual).
+/// <see cref="AddressBook"/> (nombre a  direccion virtual).
 /// </summary>
 public sealed class QuadrupleEmitter
 {
-    // ── Contador de temporales (global, nunca reinicia) ───────────────────
+    //  Contador de temporales (global, nunca reinicia) 
     private int _tempCounter;
 
-    // ── Mapa de memoria virtual ───────────────────────────────────────────
+    //  Mapa de memoria virtual ─
     private readonly VirtualMemoryMap _map = new();
 
-    // ── Pool de constantes: literal → direccion (para deduplicacion) ──────
+    //  Pool de constantes: literal a  direccion (para deduplicacion) 
     private readonly Dictionary<string, int> _constPool = new();
 
-    // ── Libro de direcciones: nombre → direccion virtual ──────────────────
+    //  Libro de direcciones: nombre a  direccion virtual 
     private readonly Dictionary<string, int> _addressBook = new();
 
     // =========================================================================
@@ -87,7 +87,7 @@ public sealed class QuadrupleEmitter
     }
 
     /// <summary>
-    /// Registra explicitamente la asociacion  nombre → direccion  en el libro.
+    /// Registra explicitamente la asociacion  nombre a  direccion  en el libro.
     /// Se llama despues de <see cref="AllocateVariable"/> para que el nombre
     /// del simbolo quede disponible en el libro.
     /// </summary>
@@ -150,14 +150,14 @@ public sealed class QuadrupleEmitter
     // =========================================================================
 
     /// <summary>
-    /// Construye un diccionario  direccion → valor real  con todas las
+    /// Construye un diccionario  direccion a  valor real  con todas las
     /// constantes registradas en el pool. La VM lo usa para pre-cargar la
     /// memoria antes de iniciar la ejecucion.
     ///
     /// Conversion por segmento:
-    ///   ConstInt    (25000-25999) → <see cref="int"/> (parse del literal).
-    ///   ConstFloat  (26000-26999) → <see cref="double"/> (parse del literal).
-    ///   ConstString (27000-27999) → <see cref="string"/> sin comillas externas.
+    ///   ConstInt    (25000-25999) a  <see cref="int"/> (parse del literal).
+    ///   ConstFloat  (26000-26999) a  <see cref="double"/> (parse del literal).
+    ///   ConstString (27000-27999) a  <see cref="string"/> sin comillas externas.
     /// </summary>
     public System.Collections.Generic.Dictionary<int, object> BuildConstValues()
     {

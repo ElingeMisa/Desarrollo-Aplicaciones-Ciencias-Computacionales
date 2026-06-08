@@ -225,6 +225,15 @@ public sealed class VirtualMachine
             case QuadOp.EndFunc:
                 return ExecuteEndFunc();
 
+            // ── Retorno de funciones ─────────────────────────────────────────
+            case QuadOp.Return:
+                // (Return, exprName, null, "{func}_ret"): copia el valor de
+                // 'exprName' (en el frame activo de la funcion) a la direccion
+                // global reservada para el retorno; el llamador la copiara a
+                // su vez a un temporal inmediatamente despues del Gosub.
+                SetValue(q.Result, GetValue(q.Left!));
+                return pc + 1;
+
             default:
                 throw new InvalidOperationException($"Operacion de cuadruplo no soportada: {q.Op}");
         }

@@ -13,6 +13,9 @@
 //    TC-VM-05  llamada a funcion void con parametros
 //    TC-VM-06  funcion con "retorno" via variable global
 //    TC-VM-07  expresiones aritmeticas mixtas (entero y flotante)
+//    TC-VM-08  'regresa' + llamada a funcion como factor de una expresion
+//    TC-VM-09  recursion con 'regresa' (Fibonacci) - valida que dos llamadas
+//              a la misma funcion en una expresion no aliasen su retorno
 //
 //  Como correr:
 //      dotnet test --filter "FullyQualifiedName~VirtualMachineTests" -v normal
@@ -279,5 +282,97 @@ public class VirtualMachineTests
         Assert.Equal("13",  lines[0]);
         Assert.Equal("30",  lines[1]);
         Assert.Equal("4",   lines[2]);
+    }
+
+    // =========================================================================
+    //  TC-VM-08: 'regresa' + llamada a funcion como factor de una expresion
+    // =========================================================================
+    //
+    //  Cubre el camino completo del nuevo mecanismo de retorno:
+    //    regresa <expr>;  ->  Quadruple(Return, d, null, "doble_ret")
+    //  y su consumo en el llamador via 'doble(x) + 1' (function-call-as-factor):
+    //    Gosub  ->  Assign "doble_ret" -> tN  ->  Plus tN, 1 -> resultado
+    //
+    [Fact]
+    public void TC_VM_08_RegresaYLlamadaComoFactor()
+    {
+        const string source = """
+            programa tc08;
+            vars resultado, x: entero;
+
+            entero doble (n: entero) {
+                vars d: entero;
+                d = n + n;
+                regresa d;
+            };
+
+            inicio {
+                x = 5;
+                resultado = doble(x) + 1;
+                escribe(resultado);
+                escribe(doble(3) + doble(10));
+            } fin
+            """;
+
+        var result = Run(source, "TC-VM-08");
+
+        Assert.True(result.Success, result.Error?.Message);
+        var lines = result.Output.Split('\n',
+            System.StringSplitOptions.RemoveEmptyEntries |
+            System.StringSplitOptions.TrimEntries);
+        Assert.Equal(2, lines.Length);
+        // doble(5) = 10  ->  10 + 1 = 11
+        Assert.Equal("11", lines[0]);
+        // doble(3) + doble(10) = 6 + 20 = 26  (dos llamadas en una misma
+        // expresion: si hubiera aliasing del placeholder "doble_ret" el
+        // segundo Gosub sobreescribiria el resultado del primero antes
+        // de la suma, y obtendriamos 20 + 20 = 40 en vez de 26)
+        Assert.Equal("26", lines[1]);
+    }
+
+    // =========================================================================
+    //  TC-VM-09: recursion con 'regresa' (Fibonacci) - anti-aliasing
+    // =========================================================================
+    //
+    //  fib(k-1) + fib(k-2) emite DOS llamadas a la misma funcion dentro de
+    //  una sola expresion. Si ExitFactorLlamada reutilizara el nombre
+    //  compartido "fib_ret" como operando de la suma, el segundo Gosub
+    //  pisaria el valor del primero antes del Plus, y el resultado seria
+    //  incorrecto. Copiar cada retorno a un temporal unico inmediatamente
+    //  despues del Gosub es lo que lo evita (vease ExitFactorLlamada).
+    //
+    [Fact]
+    public void TC_VM_09_FibonacciRecursivoConRegresa()
+    {
+        const string source = """
+            programa tc09;
+            vars n, resultado: entero;
+
+            entero fib (k: entero) {
+                vars valor: entero;
+                si (k < 2) {
+                    valor = k;
+                } sino {
+                    valor = fib(k - 1) + fib(k - 2);
+                };
+                regresa valor;
+            };
+
+            inicio {
+                n = 8;
+                resultado = fib(n);
+                escribe(resultado);
+            } fin
+            """;
+
+        var result = Run(source, "TC-VM-09");
+
+        Assert.True(result.Success, result.Error?.Message);
+        var lines = result.Output.Split('\n',
+            System.StringSplitOptions.RemoveEmptyEntries |
+            System.StringSplitOptions.TrimEntries);
+        Assert.Single(lines);
+        // fib(8) = 21 (0,1,1,2,3,5,8,13,21)
+        Assert.Equal("21", lines[0]);
     }
 }

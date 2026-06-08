@@ -91,10 +91,18 @@ estatuto
     | ciclo
     | imprime
     | call_stmt
+    | retorno
     ;
 
 asigna
     : ID OP_ASIGNA expresion SEMICOLON
+    ;
+
+// 'regresa <expr>;' - solo tiene sentido dentro del cuerpo de una funcion con
+// tipo de retorno distinto de 'nula'; esa validacion (PN-19) se hace en el
+// analizador semantico, no aqui (el parser solo reconoce la sintaxis).
+retorno
+    : KW_REGRESA expresion SEMICOLON
     ;
 
 // 'si (expr) { ... }' con rama 'sino' opcional. Termina en ';' segun la BNF.
@@ -192,6 +200,7 @@ KW_SINO      : 'sino'     ;
 KW_MIENTRAS  : 'mientras' ;
 KW_HAZ       : 'haz'      ;
 KW_ESCRIBE   : 'escribe'  ;
+KW_REGRESA   : 'regresa'  ;
 
 // --- Operadores -------------------------------------------------------------
 // '==' y '!=' deben ir antes que '=' para que el lexer prefiera la version

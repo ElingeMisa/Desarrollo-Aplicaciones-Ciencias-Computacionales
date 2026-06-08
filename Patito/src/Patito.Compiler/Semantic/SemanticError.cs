@@ -30,6 +30,8 @@ public enum SemanticErrorCode
     NameClashesWithProgram,
     // Entrega 3: incompatibilidad de tipos detectada al generar cuadruplos.
     TypeMismatch,
+    // 'regresa' usado fuera de una funcion, o en una funcion 'nula'.
+    InvalidReturn,
 }
 
 public sealed record SemanticError(

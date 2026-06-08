@@ -19,6 +19,9 @@
 //    * Param:                       param Result          (Left = Right = null)
 //    * Gosub:                       gosub Left Result     (Left=func, Right=null, Result=startQuad)
 //    * EndFunc:                     endfunc               (todos null / nombre en Result)
+//    * Return:                      {func}_ret = Left     (Left=operando, Right=null,
+//                                   Result="{funcName}_ret" -> direccion reservada
+//                                   para el valor de retorno de la funcion)
 // =============================================================================
 
 namespace Patito.Compiler.CodeGen;
@@ -58,6 +61,9 @@ public enum QuadOp
     Param,     // Pasa un argumento a la funcion que se va a llamar
     Gosub,     // Transfiere el control a la funcion (Left=nombre, Result=startQuad)
     EndFunc,   // Marca el fin del cuerpo de una funcion
+
+    // --- Retorno de funciones ---
+    Return,    // Guarda Left en la direccion de retorno de la funcion (Result="{func}_ret")
 }
 
 public static class QuadOps
@@ -82,6 +88,7 @@ public static class QuadOps
         QuadOp.Param   => "Param",
         QuadOp.Gosub   => "Gosub",
         QuadOp.EndFunc => "EndFunc",
+        QuadOp.Return  => "Return",
         _              => "?",
     };
 }

@@ -13,6 +13,17 @@ namespace Patito.Tests;
 /// </summary>
 public class ParserTests
 {
+    // Ruta de la carpeta examples/ relativa al directorio de ejecucion del test.
+    // Igual que en QuadruplesDemoTests.ExamplesDir: subimos lo suficiente desde
+    // AppContext.BaseDirectory (bin/<Config>/<TFM>/, posiblemente dentro de un
+    // directorio de despliegue temporal de VSTest) hasta la raiz del repo y
+    // entramos a examples/. Resolver asi evita depender de que la carpeta se
+    // copie al directorio de salida (Debug vs Release, distintos runners, etc.).
+    private static readonly string ExamplesDir =
+        Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..", "..", "examples"));
+
     private static CompileResult Run(string source) =>
         PatitoFrontEnd.Compile(source, "<test>");
 
@@ -259,7 +270,7 @@ public class ParserTests
     [InlineData("11_retorno_tipo.patito")]
     public void Ejemplos_Validos_Pasan(string fileName)
     {
-        var path = Path.Combine(AppContext.BaseDirectory, "examples", fileName);
+        var path = Path.Combine(ExamplesDir, fileName);
         Assert.True(File.Exists(path), $"No se encontro {path}");
         var src = File.ReadAllText(path);
         var r = Run(src);
@@ -277,7 +288,7 @@ public class ParserTests
     [InlineData("invalido_08_funcion_redeclarada.patito")]
     public void Ejemplos_Invalidos_Fallan(string fileName)
     {
-        var path = Path.Combine(AppContext.BaseDirectory, "examples", fileName);
+        var path = Path.Combine(ExamplesDir, fileName);
         Assert.True(File.Exists(path), $"No se encontro {path}");
         var src = File.ReadAllText(path);
         var r = Run(src);
