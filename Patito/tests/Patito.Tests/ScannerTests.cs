@@ -22,7 +22,7 @@ public class ScannerTests
             .ToArray();
     }
 
-    // ---- 1. Palabras reservadas y keyword vs identificador ---------------------
+    //  1. Palabras reservadas y keyword vs identificador -
 
     [Theory]
     [InlineData("programa", PatitoLexer.KW_PROGRAMA)]
@@ -62,7 +62,7 @@ public class ScannerTests
         Assert.Equal(new[] { PatitoLexer.ID }, TokenTypes(text));
     }
 
-    // ---- 2. Constantes ---------------------------------------------------------
+    //  2. Constantes -
 
     [Theory]
     [InlineData("0",        PatitoLexer.CTE_ENT)]
@@ -84,7 +84,7 @@ public class ScannerTests
         Assert.Equal(new[] { PatitoLexer.CTE_FLOT }, TokenTypes(text));
     }
 
-    // ---- 3. Letrero ------------------------------------------------------------
+    //  3. Letrero 
 
     [Fact]
     public void Letrero_AcceptaTextoSimple()
@@ -99,7 +99,7 @@ public class ScannerTests
         Assert.NotEmpty(result.LexErrors);
     }
 
-    // ---- 4. Operadores: prioridad de longest-match -----------------------------
+    //  4. Operadores: prioridad de longest-match -
 
     [Theory]
     [InlineData("==",  PatitoLexer.OP_EQ)]
@@ -123,7 +123,7 @@ public class ScannerTests
         Assert.Equal(new[] { PatitoLexer.OP_EQ }, TokenTypes("=="));
     }
 
-    // ---- 5. Comentarios y whitespace -> skip -----------------------------------
+    //  5. Comentarios y whitespace -> skip -
 
     [Fact]
     public void ComentarioDeLinea_SeIgnora()
@@ -146,7 +146,7 @@ public class ScannerTests
             TokenTypes("  a   +\t b  "));
     }
 
-    // ---- 6. Caracter invalido --------------------------------------------------
+    //  6. Caracter invalido 
 
     [Fact]
     public void CaracterInvalido_GeneraErrorLexico()

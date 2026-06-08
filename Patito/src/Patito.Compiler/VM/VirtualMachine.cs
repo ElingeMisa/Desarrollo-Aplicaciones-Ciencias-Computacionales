@@ -19,7 +19,7 @@
 //
 //  Al iniciar:
 //    * Las constantes (25000-27999) se cargan en _globalMemory desde
-//      el diccionario constValues  (address → valor real).
+//      el diccionario constValues  (address -> valor real).
 //    * _activeLocal apunta al frame del programa principal (un
 //      ExecutionMemory vacio que acumula los temporales del inicio{}).
 //
@@ -73,8 +73,8 @@ public sealed class VirtualMachine
     /// Crea una nueva maquina virtual lista para ejecutar.
     /// </summary>
     /// <param name="quads">Lista de cuadruplos generada por el compilador.</param>
-    /// <param name="addressBook">Mapa nombre → direccion virtual.</param>
-    /// <param name="constValues">Mapa direccion → valor real de cada constante.</param>
+    /// <param name="addressBook">Mapa nombre -> direccion virtual.</param>
+    /// <param name="constValues">Mapa direccion -> valor real de cada constante.</param>
     /// <param name="funcDir">Directorio de funciones (para obtener dir. de parametros).</param>
     /// <param name="output">
     /// TextWriter al que se escriben los <c>escribe</c> en tiempo real.

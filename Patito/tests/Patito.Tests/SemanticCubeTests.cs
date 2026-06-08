@@ -1,6 +1,4 @@
-// =============================================================================
 //  SemanticCubeTests.cs - Verifica todas las celdas del cubo semantico.
-// =============================================================================
 using Patito.Compiler.Semantic;
 using Xunit;
 
@@ -15,7 +13,7 @@ public class SemanticCubeTests
 {
     private static readonly SemanticCube Cube = SemanticCube.Default;
 
-    // ------ Aritmeticos +, -, * --------------------------------------------
+    //  Aritmeticos +, -, * 
     [Theory]
     [InlineData(SemanticType.Entero,   SemanticType.Entero,   SemanticType.Entero)]
     [InlineData(SemanticType.Entero,   SemanticType.Flotante, SemanticType.Flotante)]
@@ -28,7 +26,7 @@ public class SemanticCubeTests
         Assert.Equal(expected, Cube.Resolve(l, SemanticOp.Times, r));
     }
 
-    // ------ Division: siempre flotante --------------------------------------
+    //  Division: siempre flotante 
     [Theory]
     [InlineData(SemanticType.Entero,   SemanticType.Entero)]
     [InlineData(SemanticType.Entero,   SemanticType.Flotante)]
@@ -39,7 +37,7 @@ public class SemanticCubeTests
         Assert.Equal(SemanticType.Flotante, Cube.Resolve(l, SemanticOp.Divide, r));
     }
 
-    // ------ Relacionales ----------------------------------------------------
+    //  Relacionales 
     [Theory]
     [InlineData(SemanticOp.Lt)]
     [InlineData(SemanticOp.Gt)]
@@ -52,7 +50,7 @@ public class SemanticCubeTests
                 Assert.Equal(SemanticType.Bool, Cube.Resolve(l, op, r));
     }
 
-    // ------ Asignacion ------------------------------------------------------
+    //  Asignacion 
     [Fact]
     public void Asignacion_EnteroAEntero_Ok()
     {
@@ -79,7 +77,7 @@ public class SemanticCubeTests
         Assert.Equal(SemanticType.Error, Cube.Resolve(SemanticType.Entero, SemanticOp.Assign, SemanticType.Flotante));
     }
 
-    // ------ Combinaciones invalidas ----------------------------------------
+    //  Combinaciones invalidas 
     [Fact]
     public void Operacion_ConBool_EsError()
     {

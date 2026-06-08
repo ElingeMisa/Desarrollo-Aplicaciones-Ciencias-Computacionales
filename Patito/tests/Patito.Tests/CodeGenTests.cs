@@ -2,28 +2,6 @@
 //  CodeGenTests.cs - Pruebas de generacion de codigo intermedio (cuadruplos).
 //  Autor: Victor Misael Escalante Alvarado, A01741176
 // =============================================================================
-//
-//  Estas pruebas verifican los cuadruplos emitidos por los puntos neuralgicos
-//  PN-8 a PN-18 del SemanticAnalyzer.  El formato de cada cuadruplo es:
-//
-//      (Index, Op, Left?, Right?, Result)
-//
-//  Convencion de temporales: "t0", "t1", "t2", ... en orden de emision.
-//  Los indices de cuadruplos son base 0.
-//
-//  Puntos neuralgicos cubiertos:
-//      [PN-8]  ExitFactorSimple   -> push operando/tipo; Neg para unario
-//      [PN-9]  ExitTermino        -> Times / Divide
-//      [PN-10] ExitExp            -> Plus / Minus
-//      [PN-11] ExitExpresion      -> Lt / Gt / Eq / Neq + GotoF condicional
-//      [PN-12] ExitAsigna         -> Assign con validacion de cubo
-//      [PN-13] ExitImp            -> Print
-//      [PN-14] EnterCiclo         -> guarda inicio del while
-//      [PN-15] ExitCuerpo         -> Goto + Backfill(GotoF) en si-sino
-//      [PN-16] ExitCondicion      -> Backfill final del si o si-sino
-//      [PN-17] ExitCiclo          -> Goto al inicio + Backfill(GotoF) del while
-//      [PN-18] ExitCall_stmt      -> Param + Gosub
-// =============================================================================
 
 using System.Collections.Generic;
 using System.Linq;

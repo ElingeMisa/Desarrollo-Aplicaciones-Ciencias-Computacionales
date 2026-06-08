@@ -1,4 +1,4 @@
-// =============================================================================
+// 
 //  Patito.g4 - Gramatica unificada (lexer + parser) del lenguaje Patito.
 //  Autor: Victor Misael Escalante Alvarado, A01741176
 //  Generador: ANTLR 4.13 (target: CSharp)
@@ -15,20 +15,20 @@
 //      LETRERO, operadores, delimitadores).
 //    - Reglas BNF (programa, vars, funcs, cuerpo, estatuto, asigna,
 //      condicion, ciclo, imprime, llamada, expresion, exp, termino, factor).
-// =============================================================================
+// 
 
 grammar Patito;
 
-// =============================================================================
+// 
 //  REGLAS DEL PARSER
-// =============================================================================
+// 
 
 // Punto de entrada del parser. Se nombra 'programa' para coincidir con la BNF.
 programa
     : KW_PROGRAMA ID SEMICOLON vars funcs KW_INICIO cuerpo KW_FIN EOF
     ;
 
-// --- Declaracion de variables ----------------------------------------------
+//  Declaracion de variables -
 // La seccion 'vars' es opcional: puede omitirse por completo.
 // NOTA: la BNF de la Entrega 0 escribia "vars : <listado_vars>" (con un ':'
 // despues de la palabra 'vars') pero el diagrama de sintaxis NO incluye dicho
@@ -54,7 +54,7 @@ tipo
     | KW_FLOTANTE
     ;
 
-// --- Funciones --------------------------------------------------------------
+//  Funciones 
 // Cero o mas definiciones de funcion. Interpretamos la BNF de modo que el
 // cuerpo de la funcion lleva sus propias 'vars' locales seguidas del bloque
 // de instrucciones, todo dentro de un par unico de llaves (ver doc).
@@ -77,14 +77,14 @@ func_body
     : LBRACE vars estatuto* RBRACE
     ;
 
-// --- Cuerpo (bloques de control) -------------------------------------------
+//  Cuerpo (bloques de control) -
 // Cuerpo usado por 'si', 'mientras' y por el bloque principal entre
 // 'inicio' y 'fin'. La gramatica original lo define como { list_estatutos }.
 cuerpo
     : LBRACE estatuto* RBRACE
     ;
 
-// --- Estatutos --------------------------------------------------------------
+//  Estatutos 
 estatuto
     : asigna
     | condicion
@@ -139,7 +139,7 @@ args
     : expresion (COMA expresion)*
     ;
 
-// --- Expresiones ------------------------------------------------------------
+//  Expresiones 
 // Una expresion es una 'exp' opcionalmente seguida de un operador relacional
 // y otra 'exp'. Coincide con el diagrama (rel_op no se encadena).
 expresion
@@ -183,11 +183,11 @@ cte
     | CTE_FLOT
     ;
 
-// =============================================================================
+// 
 //  REGLAS DEL LEXER
-// =============================================================================
+// 
 
-// --- Palabras reservadas (deben ir ANTES de ID) ----------------------------
+//  Palabras reservadas (deben ir ANTES de ID) -
 KW_PROGRAMA  : 'programa' ;
 KW_INICIO    : 'inicio'   ;
 KW_FIN       : 'fin'      ;
@@ -202,7 +202,7 @@ KW_HAZ       : 'haz'      ;
 KW_ESCRIBE   : 'escribe'  ;
 KW_REGRESA   : 'regresa'  ;
 
-// --- Operadores -------------------------------------------------------------
+//  Operadores -
 // '==' y '!=' deben ir antes que '=' para que el lexer prefiera la version
 // de dos caracteres (regla longest-match).
 OP_EQ        : '==' ;
@@ -215,7 +215,7 @@ OP_MENOS     : '-'  ;
 OP_POR       : '*'  ;
 OP_DIV       : '/'  ;
 
-// --- Delimitadores / puntuacion --------------------------------------------
+//  Delimitadores / puntuacion 
 SEMICOLON    : ';' ;
 COMA         : ',' ;
 LPAREN       : '(' ;
@@ -224,28 +224,28 @@ LBRACE       : '{' ;
 RBRACE       : '}' ;
 COLON        : ':' ;
 
-// --- Constantes -------------------------------------------------------------
+//  Constantes -
 // CTE_FLOT debe ir ANTES que CTE_ENT para que '3.14' no se tokenize como
 // CTE_ENT('3') . CTE_ENT('14').
 CTE_FLOT     : DIGITO+ '.' DIGITO+ ;
 CTE_ENT      : DIGITO+ ;
 
-// --- Identificadores --------------------------------------------------------
+//  Identificadores 
 // Coincide con: letra alfanum*  donde letra = [a-zA-Z], alfanum = letra | digito.
 // Se permiten mayusculas para soportar identificadores camelCase (p.ej. sumarHasta).
 ID           : LETRA ALFANUM* ;
 
-// --- Cadenas literales ('letrero') -----------------------------------------
+//  Cadenas literales ('letrero') 
 // Comilla doble, cualquier caracter excepto otra comilla o salto de linea,
 // cerrada con comilla doble. No permite escapes.
 LETRERO      : '"' ~["\r\n]* '"' ;
 
-// --- Fragments (definiciones auxiliares, NO producen tokens) ---------------
+//  Fragments (definiciones auxiliares, NO producen tokens) 
 fragment LETRA   : [a-zA-Z] ;
 fragment DIGITO  : [0-9] ;
 fragment ALFANUM : LETRA | DIGITO ;
 
-// --- Espacios y comentarios -> skip ----------------------------------------
+//  Espacios y comentarios -> skip -
 // Comentarios de linea estilo //  y de bloque  /* ... */ - ambos se descartan.
 WS            : [ \t\r\n]+   -> skip ;
 COMMENT_LINE  : '//' ~[\r\n]* -> skip ;

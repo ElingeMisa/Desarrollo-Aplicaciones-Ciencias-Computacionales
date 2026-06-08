@@ -6,26 +6,6 @@
 //  Este archivo contiene pruebas de demostracion que compilan cada programa de
 //  ejemplo valido y muestran, de forma formateada, el codigo fuente junto con
 //  la fila completa de cuadruplos generados.
-//
-//  Como correr:
-//      dotnet test --filter "FullyQualifiedName~QuadruplesDemoTests" -v normal
-//
-//  La salida formateada aparece en la seccion "Standard Output" de cada test.
-//  Cada prueba [Fact] representa un programa de ejemplo del repositorio.
-//
-//  Los programas estan ordenados por complejidad creciente:
-//    01 - Minimo (solo escribe)
-//    02 - Variables, aritmetica y asignacion
-//    03 - Condicional si/sino
-//    04 - Ciclo mientras/haz
-//    05 - Funcion con ciclo interno
-//    06 - Expresiones mixtas y relacionales
-//    07 - Comentarios (misma semantica que el ciclo)
-//    08 - Multiples funciones y llamadas
-//    09 - Anidamiento de si/sino y mientras
-//    10 - Tipos flotantes y division
-//    11 - Funcion con tipo de retorno usada en expresion
-// =============================================================================
 
 using System;
 using System.Collections.Generic;

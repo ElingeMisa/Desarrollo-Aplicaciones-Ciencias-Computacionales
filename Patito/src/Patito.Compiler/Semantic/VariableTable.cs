@@ -24,8 +24,7 @@
 //
 //  Operaciones expuestas:
 //
-//    * TryDeclare(symbol)  -> bool : intenta agregar el simbolo. Devuelve
-//                                    false si ya existia (sin sobrescribir).
+//    * TryDeclare(symbol)  -> bool : intenta agregar el simbolo. Devuelve false si ya existia (sin sobrescribir).
 //    * TryLookup(name, out sym) -> bool : busca por nombre.
 //    * Contains(name)      -> bool : version corta de TryLookup.
 //    * Symbols             -> enumeracion de todos los simbolos (debug/test).
